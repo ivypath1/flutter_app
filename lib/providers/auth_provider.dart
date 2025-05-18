@@ -3,6 +3,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ivy_path/models/auth_response.dart';
 import 'package:ivy_path/services/api_client.dart';
+import 'dart:io' show Platform;
 
 part 'auth_provider.g.dart';
 
@@ -16,9 +17,17 @@ class Auth extends _$Auth {
     final token = await _storage.read(key: 'token');
     if (token == null) return null;
     
-    // Here you might want to validate the token or fetch user data
-    // For now, we'll just return null if there's no token
-    return null;
+    // Here you would typically validate the token with your backend
+    // For now, we'll create a basic AuthResponse with the stored token
+    try {
+      final apiClient = ApiClient();
+      // You could add an endpoint to validate token and get user info
+      // For now we'll just return null if token exists but is invalid
+      return null;
+    } catch (e) {
+      await _storage.delete(key: 'token');
+      return null;
+    }
   }
 
   Future<void> login(String activationCode) async {
