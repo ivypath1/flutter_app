@@ -3,26 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:ivy_path/screens/session_screen.dart';
 import 'package:ivy_path/utitlity/responsiveness.dart';
 import 'package:ivy_path/widgets/layout_widget.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Practice Setup',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      home: const QuestionsPage(),
-    );
-  }
-}
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 class QuestionsPage extends StatefulWidget {
   const QuestionsPage({super.key});
@@ -453,33 +434,31 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                         ],
                                       ),
                                       const SizedBox(height: 12),
-                                      GridView.count(
-                                        shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
+                                      StaggeredGrid.count(
                                         crossAxisCount: mediaSetup(size, sm: 1, md: 2).toInt(),
-                                        crossAxisSpacing: 12,
                                         mainAxisSpacing: 12,
-                                        childAspectRatio: mediaSetup(size, sm: 3/2, md: 1.5, lg: 2.1),
+                                        crossAxisSpacing: 12,
                                         children: _subjects.map((subject) {
                                           final isSelected = _selectedSubjects.contains(subject["id"]);
                                           final isDisabled = _selectedSubjects.length >= 4 && !isSelected;
                                           
-                                          return Container(
-                                            constraints: const BoxConstraints(maxHeight: 150),
-                                            child: GestureDetector(
-                                              onTap: isDisabled ? null : () => _handleSubjectToggle(subject["id"]),
-                                              child: Card(
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  side: BorderSide(
-                                                    color: isSelected
-                                                        ? Theme.of(context).colorScheme.primary
-                                                        : Theme.of(context).dividerColor,
-                                                  ),
+                                          return StaggeredGridTile.fit(
+                                            crossAxisCellCount: 1,
+                                            child: Card(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                side: BorderSide(
+                                                  color: isSelected
+                                                      ? Theme.of(context).colorScheme.primary
+                                                      : Theme.of(context).dividerColor,
                                                 ),
-                                                color: isDisabled
-                                                    ? Theme.of(context).disabledColor.withOpacity(0.05)
-                                                    : null,
+                                              ),
+                                              color: isDisabled
+                                                  ? Theme.of(context).disabledColor.withOpacity(0.05)
+                                                  : null,
+                                              child: InkWell(
+                                                onTap: isDisabled ? null : () => _handleSubjectToggle(subject["id"]),
+                                                borderRadius: BorderRadius.circular(12),
                                                 child: Padding(
                                                   padding: const EdgeInsets.all(12),
                                                   child: Column(

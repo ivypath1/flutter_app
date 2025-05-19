@@ -24,11 +24,15 @@ class MyApp extends StatelessWidget {
         title: 'IvyPath',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-        home: const LoginScreen(),
+        home: Consumer<AuthProvider>(
+          builder: (context, auth, _) {
+            return  auth.isInitialized ? auth.isAuthenticated ? const DashboardScreen() : const LoginScreen() : 
+            const CircularProgressIndicator();
+          },
+        ),
         routes: {
           '/dashboard': (context) => const DashboardScreen(),
           '/practice': (context) => const QuestionsPage(),
-          // '/session': (context) => const SessionPage(),
         },
       ),
     );

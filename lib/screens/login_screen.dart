@@ -13,7 +13,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -24,27 +23,16 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleActivation() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-    
-    final success = await context.read<AuthProvider>().activateWithCode(
+    final success = await context.read<AuthProvider>().login(
       _codeController.text,
     );
 
-    setState(() => _isLoading = false);
-
     if (success && mounted) {
       Navigator.pushReplacementNamed(context, '/dashboard');
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid activation code. Please try again.'),
-        ),
-      );
     }
   }
 
   Future<void> _handleQRScan() async {
-    // TODO: Implement QR code scanning
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('QR code scanning coming soon!'),
@@ -55,6 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final auth = context.watch<AuthProvider>();
     
     return Scaffold(
       body: SafeArea(
@@ -91,6 +80,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       delay: const Duration(milliseconds: 200),
                     ),
                     const SizedBox(height: 48),
+                    if (auth.error != null)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          auth.error!,
+                          style: TextStyle(
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
                     Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(
@@ -100,28 +104,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           children: [
-                            SizedBox(
-                              width: double.infinity,
-                              child: TextFormField(
-                                controller: _codeController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Enter Activation Code',
-                                  prefixIcon: Icon(Icons.key),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your activation code';
-                                  }
-                                  if (value.length != 6) {
-                                    return 'Activation code must be 6 characters';
-                                  }
-                                  return null;
-                                },
-                              ).animate().fadeIn().slideX(
-                                begin: 0.2,
-                                duration: const Duration(milliseconds: 500),
-                                delay: const Duration(milliseconds: 400),
+                            TextFormField(
+                              controller: _codeController,
+                              decoration: const InputDecoration(
+                                labelText: 'Enter Activation Code',
+                                prefixIcon: Icon(Icons.key),
                               ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your activation code';
+                                }
+                                if (value.length != 22) {
+                                  return 'Activation code must be 22 characters';
+                                }
+                                return null;
+                              },
+                            ).animate().fadeIn().slideX(
+                              begin: 0.2,
+                              duration: const Duration(milliseconds: 500),
+                              delay: const Duration(milliseconds: 400),
                             ),
                             const SizedBox(height: 24),
                             Row(
@@ -160,8 +161,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleActivation,
-                        child: _isLoading
+                        onPressed: auth.isLoading ? null : _handleActivation,
+                        child: auth.isLoading
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
@@ -177,7 +178,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: () {
-                        // TODO: Implement help functionality
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Help functionality coming soon!'),

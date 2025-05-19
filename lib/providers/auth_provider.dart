@@ -1,52 +1,111 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:ivy_path/models/auth_model.dart';
+import 'package:ivy_path/services/api_service.dart';
+import 'package:ivy_path/services/storage_service.dart';
 import 'dart:io';
 
 class AuthProvider extends ChangeNotifier {
-  final _storage = const FlutterSecureStorage();
+  final _storage = StorageService();
+  final _api = ApiService();
   final _deviceInfo = DeviceInfoPlugin();
-  bool _isAuthenticated = false;
-  String? _deviceId;
+  
+  
+  bool _isLoading = false;
+  String? _error;
+  AuthResponse? _authData;
+  bool _isInitialized = false;
 
-  bool get isAuthenticated => _isAuthenticated;
-  String? get deviceId => _deviceId;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  bool get isAuthenticated => _storage.isAuthenticated;
+  AuthResponse? get authData => _authData;
+  bool get isInitialized => _isInitialized;
 
-  Future<void> initialize() async {
-    await _getDeviceId();
-    final storedActivationCode = await _storage.read(key: 'activation_code');
-    _isAuthenticated = storedActivationCode != null;
+  AuthProvider() {
+    _initializeAuth();
+  }
+
+  Future<void> _initializeAuth() async {
+    await _storage.init();
+    _authData = _storage.getAuthData();
+    _isInitialized = true;
     notifyListeners();
   }
 
-  Future<void> _getDeviceId() async {
+  Future<String> _getDeviceName() async {
     try {
       if (Platform.isAndroid) {
         final androidInfo = await _deviceInfo.androidInfo;
-        _deviceId = androidInfo.id;
+        return androidInfo.model;
       } else if (Platform.isIOS) {
         final iosInfo = await _deviceInfo.iosInfo;
-        _deviceId = iosInfo.identifierForVendor;
+        return iosInfo.name;
+      } else if (Platform.isMacOS) {
+        final macOsInfo = await _deviceInfo.macOsInfo;
+        return macOsInfo.computerName;
+      } else if (Platform.isWindows) {
+        final windowsInfo = await _deviceInfo.windowsInfo;
+        return windowsInfo.computerName;
       }
+      return 'Unknown Device';
     } catch (e) {
-      debugPrint('Error getting device ID: $e');
+      return 'Unknown Device';
     }
   }
 
-  Future<bool> activateWithCode(String code) async {
-    // TODO: Implement actual activation code verification
-    if (code.length == 6) {
-      await _storage.write(key: 'activation_code', value: code);
-      _isAuthenticated = true;
+  Future<String> _getDeviceId() async {
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await _deviceInfo.androidInfo;
+        return androidInfo.id;
+      } else if (Platform.isIOS) {
+        final iosInfo = await _deviceInfo.iosInfo;
+        return iosInfo.identifierForVendor ?? 'unknown';
+      } else if (Platform.isMacOS) {
+        final macOsInfo = await _deviceInfo.macOsInfo;
+        return macOsInfo.systemGUID ?? 'unknown';
+      } else if (Platform.isWindows) {
+        final windowsInfo = await _deviceInfo.windowsInfo;
+        return windowsInfo.deviceId;
+      }
+      return 'unknown';
+    } catch (e) {
+      return 'unknown';
+    }
+  }
+
+  Future<bool> login(String activationCode) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final deviceName = await _getDeviceName();
+      final deviceId = await _getDeviceId();
+
+      final authResponse = await _api.login(
+        activationCode: activationCode,
+        deviceName: deviceName,
+        deviceId: deviceId,
+      );
+
+      await _storage.saveAuthData(authResponse);
+      _authData = authResponse;
+      _isLoading = false;
       notifyListeners();
       return true;
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+      return false;
     }
-    return false;
   }
 
   Future<void> logout() async {
-    await _storage.delete(key: 'activation_code');
-    _isAuthenticated = false;
+    await _storage.clearAuthData();
+    _authData = null;
     notifyListeners();
   }
 }
