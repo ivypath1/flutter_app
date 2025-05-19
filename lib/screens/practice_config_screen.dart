@@ -143,7 +143,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
             "section": "all", // Mock exams typically use all sections
           };
         }).toList(),
-        "duration": 45, // Mock exams typically have fixed duration
+        "duration": 45.0, // Mock exams typically have fixed duration
         "shuffleQuestions": _shuffleQuestions,
         "shuffleOptions": _shuffleOptions,
       };
@@ -728,7 +728,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                 ),
                                               ),
                                               child: InkWell(
-                                                onTap: () => _handleSubjectToggle(subject["id"]),
+                                                onTap: () => _handleMockSubjectToggle(subject["id"]),
                                                 borderRadius: BorderRadius.circular(12),
                                                 child: Padding(
                                                   padding: const EdgeInsets.all(12),
@@ -772,7 +772,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                             ],
                                                           ),
                                                           Chip(
-                                                            label: Text("${subject["questions"]} Questions"),
+                                                            label: Text("${subject["questions"]} "),
                                                             side: BorderSide.none,
                                                             visualDensity: VisualDensity.compact,
                                                           ),
