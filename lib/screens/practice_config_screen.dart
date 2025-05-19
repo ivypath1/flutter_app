@@ -708,18 +708,16 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                         ],
                                       ),
                                       const SizedBox(height: 12),
-                                      GridView.count(
-                                        shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        crossAxisCount: mediaSetup(size, sm: 1, md: 2) as int,
-                                        crossAxisSpacing: 12,
+                                      StaggeredGrid.count(
+                                        crossAxisCount: mediaSetup(size, sm: 1, md: 2).toInt(),
                                         mainAxisSpacing: 12,
-                                        childAspectRatio: mediaSetup(size, sm: 3/2, md: 1.5, lg: 2.1),
+                                        crossAxisSpacing: 12,
                                         children: _mockSubjects.map((subject) {
                                           final isSelected = _selectedMockSubjects.contains(subject["id"]);
+                                          // final isDisabled = _selectedSubjects.length >= 4 && !isSelected;
                                           
-                                          return GestureDetector(
-                                            onTap: () => _handleMockSubjectToggle(subject["id"]),
+                                          return StaggeredGridTile.fit(
+                                            crossAxisCellCount: 1,
                                             child: Card(
                                               shape: RoundedRectangleBorder(
                                                 borderRadius: BorderRadius.circular(12),
@@ -729,55 +727,59 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                       : Theme.of(context).dividerColor,
                                                 ),
                                               ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(12),
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Row(
-                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                      children: [
-                                                        Row(
-                                                          children: [
-                                                            Container(
-                                                              width: 20,
-                                                              height: 20,
-                                                              decoration: BoxDecoration(
-                                                                shape: BoxShape.circle,
-                                                                border: Border.all(
+                                              child: InkWell(
+                                                onTap: () => _handleSubjectToggle(subject["id"]),
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(12),
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Row(
+                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                        children: [
+                                                          Row(
+                                                            children: [
+                                                              Container(
+                                                                width: 20,
+                                                                height: 20,
+                                                                decoration: BoxDecoration(
+                                                                  shape: BoxShape.circle,
+                                                                  border: Border.all(
+                                                                    color: isSelected
+                                                                        ? Theme.of(context).colorScheme.primary
+                                                                        : Theme.of(context).dividerColor,
+                                                                  ),
                                                                   color: isSelected
                                                                       ? Theme.of(context).colorScheme.primary
-                                                                      : Theme.of(context).dividerColor,
+                                                                      : Colors.transparent,
                                                                 ),
-                                                                color: isSelected
-                                                                    ? Theme.of(context).colorScheme.primary
-                                                                    : Colors.transparent,
+                                                                child: isSelected
+                                                                    ? Icon(
+                                                                        Icons.check,
+                                                                        size: 14,
+                                                                        color: Theme.of(context).colorScheme.onPrimary,
+                                                                      )
+                                                                    : null,
                                                               ),
-                                                              child: isSelected
-                                                                  ? Icon(
-                                                                      Icons.check,
-                                                                      size: 14,
-                                                                      color: Theme.of(context).colorScheme.onPrimary,
-                                                                    )
-                                                                  : null,
-                                                            ),
-                                                            const SizedBox(width: 8),
-                                                            Text(
-                                                              subject["name"],
-                                                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                                fontWeight: FontWeight.bold,
+                                                              const SizedBox(width: 8),
+                                                              Text(
+                                                                subject["name"],
+                                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
                                                               ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        Chip(
-                                                          label: Text("${subject["questions"]} Questions"),
-                                                          side: BorderSide.none,
-                                                          visualDensity: VisualDensity.compact,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
+                                                            ],
+                                                          ),
+                                                          Chip(
+                                                            label: Text("${subject["questions"]} Questions"),
+                                                            side: BorderSide.none,
+                                                            visualDensity: VisualDensity.compact,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
                                             ),
