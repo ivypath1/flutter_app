@@ -17,6 +17,7 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(SubjectAdapter());
   Hive.registerAdapter(SectionAdapter());
+  Hive.registerAdapter(QuestionAdapter());
 
   runApp(const MyApp());
 }

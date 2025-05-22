@@ -1,3 +1,4 @@
+// lib/models/subject_model.dart
 import 'package:hive/hive.dart';
 
 part 'subject_model.g.dart';
@@ -41,22 +42,28 @@ class Section {
   @HiveField(2)
   final int subjectId;
 
+  @HiveField(3)
+  final int version;
+
   Section({
     required this.id,
     required this.name,
     required this.subjectId,
+    required this.version,
   });
 
   factory Section.fromJson(Map<String, dynamic> json) {
+    print(json['version'].runtimeType );
+    print(json['subject_id'].runtimeType );
+    print(json['id'].runtimeType );
     return Section(
       id: json['id'],
       name: json['name'],
       subjectId: json['subject_id'],
+      version: json['version'] ?? 0,
     );
   }
 }
-
-
 
 @HiveType(typeId: 4)
 class Question {
@@ -82,19 +89,22 @@ class Question {
     required this.id,
     required this.question,
     required this.options,
-    required this.answer, 
-    required this.solution, 
-    required this.sectionId
+    required this.answer,
+    required this.solution,
+    required this.sectionId,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
     return Question(
       id: json['id'],
-      question: json['name'],
-      options: json['subject_id'],
+      question: json['question'],
+      options: (json['options'] as List).map((option) => {
+        'id': option['id'] as String,
+        'text': option['text'] as String,
+      }).toList(),
       answer: json['answer'],
       solution: json['solution'],
-      sectionId: json['section']
+      sectionId: json['section'],
     );
   }
 }
