@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:async';
 
+import 'package:flutter_math_fork/flutter_math.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:ivy_path/screens/result_screen.dart';
+
 
 class SessionPage extends StatefulWidget {
   final String mode; // 'study', 'practice', or 'mock'
@@ -46,73 +49,171 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
       "id": "mathematics",
       "name": "Mathematics",
       "questions": [
-        {
-          "id": 1,
-          "question": "If x² + 4x + 4 = 0, what is the value of x?",
-          "options": [
-            {"id": "A", "text": "-2"},
-            {"id": "B", "text": "2"},
-            {"id": "C", "text": "-4"},
-            {"id": "D", "text": "4"},
-          ],
-          "correctAnswer": "A",
-          "explanation": "This is a quadratic equation that can be factored as (x + 2)² = 0. Therefore, the solution is x = -2."
-        },
-        {
-          "id": 2,
-          "question": "What is the value of π (pi) to two decimal places?",
-          "options": [
-            {"id": "A", "text": "3.14"},
-            {"id": "B", "text": "3.16"},
-            {"id": "C", "text": "3.18"},
-            {"id": "D", "text": "3.12"},
-          ],
-          "correctAnswer": "A",
-          "explanation": "The value of π is approximately 3.14159, which rounds to 3.14 to two decimal places."
-        },
-        {
-          "id": 3,
-          "question": "What is the area of a triangle with base 6 and height 4?",
-          "options": [
-            {"id": "A", "text": "12"},
-            {"id": "B", "text": "24"},
-            {"id": "C", "text": "10"},
-            {"id": "D", "text": "18"},
-          ],
-          "correctAnswer": "A",
-          "explanation": "The area of a triangle is calculated as (base × height)/2, so (6 × 4)/2 = 12."
-        },
-      ]
+      {
+        "id": 1,
+        "question": r"If x² + 4x + 4 = 0, what is the value of x? \n Find the differential coefficient of $ \frac{x2-5x+7}{2x} $ at the point (2, 1/4).",
+        "options": [
+          {"id": "A", "text": "-2"},
+          {"id": "B", "text": "2"},
+          {"id": "C", "text": "-4"},
+          {"id": "D", "text": "4"},
+        ],
+        "correctAnswer": "A",
+        "explanation": "This is a quadratic equation that can be factored as (x + 2)² = 0. Therefore, the solution is x = -2."
+      },
+      {
+        "id": 2,
+        "question": """Based on the temperature data below, what is the average (mean) temperature?
+        | Compounds | Molecular Mass | Nature  |\n|-----------|----------------|---------|\n| H₂S       | 32             | Gas     |\n| CO₂       | 44             | Gas     |\n| SO₂       | 64             | Gas     |\n| H₂O       | 18             | Liquid  |
+        """,
+        "options": [
+          {"id": "A", "text": "21.8°C"},
+          {"id": "B", "text": "22.0°C"},
+          {"id": "C", "text": "21.5°C"},
+          {"id": "D", "text": "21.0°C"},
+        ],
+        "correctAnswer": "A",
+        "explanation": "Mean = (22 + 24 + 21 + 19 + 23)/5 = 109/5 = 21.8°C"
+      },
+      {
+        "id": 3,
+        "question": r"Solve the system of equations:\n$$\\begin{cases} 3x + 2y = 11 \\\\ x - y = 1 \\end{cases}$$",
+        "options": [
+          {"id": "A", "text": "x = 3, y = 2"},
+          {"id": "B", "text": "x = 3, y = 1"},
+          {"id": "C", "text": "x = 2, y = 2.5"},
+          {"id": "D", "text": "x = 4, y = 3"},
+        ],
+        "correctAnswer": "B",
+        "explanation": r"""From the second equation: $x = y + 1$
+Substituting into the first: $3(y + 1) + 2y = 11$
+$3y + 3 + 2y = 11$
+$5y + 3 = 11$
+$5y = 8$
+$y = \\frac{8}{5} = 1.6$
+Therefore $x = y + 1 = 2.6$
+The closest answer is B."""
+      },
+    ]
     },
     {
       "id": "english",
       "name": "English",
       "questions": [
-        {
-          "id": 1,
-          "question": "Which word is a synonym for 'happy'?",
-          "options": [
-            {"id": "A", "text": "Joyful"},
-            {"id": "B", "text": "Sad"},
-            {"id": "C", "text": "Angry"},
-            {"id": "D", "text": "Tired"},
-          ],
-          "correctAnswer": "A",
-          "explanation": "Joyful means feeling or expressing great happiness."
-        },
-        {
-          "id": 2,
-          "question": "Identify the noun in this sentence: 'The quick brown fox jumps over the lazy dog.'",
-          "options": [
-            {"id": "A", "text": "Fox and dog"},
-            {"id": "B", "text": "Quick and brown"},
-            {"id": "C", "text": "Jumps and over"},
-            {"id": "D", "text": "The and lazy"},
-          ],
-          "correctAnswer": "A",
-          "explanation": "Fox and dog are nouns as they name animals (things)."
-        },
-      ]
+  {
+    "id": 1,
+    "question": "The common ratio of a geometric progression is 2. If the 5th term is greater than the 1st term by 45, find the 5th term.",
+    "options": [
+      {
+        "id": "A",
+        "text": "2"
+      },
+      {
+        "id": "B",
+        "text": "8"
+      },
+      {
+        "id": "C",
+        "text": "45"
+      },
+      {
+        "id": "D",
+        "text": "48"
+      }
+    ],
+    "correctAnswer": "",
+    "explanation": ""
+  },
+  {
+    "id": 2,
+    "question": r"$ 8x^{-2}=\frac{2}{25}\ .\int12\  $",
+    "options": [
+      {
+        "id": "A",
+        "text": "1/5"
+      },
+      {
+        "id": "B",
+        "text": "2/5"
+      },
+      {
+        "id": "C",
+        "text": "5"
+      },
+      {
+        "id": "D",
+        "text": "10"
+      }
+    ],
+    "correctAnswer": "",
+    "explanation": ""
+  },
+  {
+    "id": 3,
+    "question": r"Solve $sin^2x+2\\ sinx\\ +1=0\\ \\ $for 0$\u00b0 <x<360\u00b0$.",
+    "options": [
+      {
+        "id": "A",
+        "text": "90"
+      },
+      {
+        "id": "B",
+        "text": "180"
+      },
+      {
+        "id": "C",
+        "text": "210"
+      },
+      {
+        "id": "D",
+        "text": "270"
+      }
+    ],
+    "correctAnswer": "",
+    "explanation": ""
+  },
+  {
+    "id": 4,
+    "question": r"Solve the equation $ 8x^{-2}=\frac{2}{25}\ .\  $ and then calculate $\int_{0}^{\pi} \sin(x) dx = 2$",
+    "options": [
+      {
+        "id": "A",
+        "text": "8"
+      },
+      {
+        "id": "B",
+        "text": "10"
+      },
+      {
+        "id": "C",
+        "text": "16"
+      },
+      {
+        "id": "D",
+        "text": "20"
+      }
+    ],
+    "correctAnswer": "",
+    "explanation": ""
+  },
+  {
+    "id": 5,
+    "question": "Find the equation of the circle which has its center at (-2, 3) and passes through the point (4,5).",
+    "options": [
+      {
+        "id": "A",
+        "text": r"$x2+2x+y2 -3y-27=0$"
+      },
+      {
+        "id": "B",
+        "text": r"$x2+y2+4x-6y-27=0$"
+      }
+    ],
+    "correctAnswer": "",
+    "explanation": ""
+  }
+]
+
     },
     {
       "id": "physics",
@@ -491,10 +592,11 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              Text(
-                                _currentQuestionData["question"],
-                                style: const TextStyle(fontSize: 18),
-                              ),
+                              MathContentWidget(content: _currentQuestionData["question"]),
+                              // Text(
+                              //   _currentQuestionData["question"],
+                              //   style: const TextStyle(fontSize: 18),
+                              // ),
                               const SizedBox(height: 16),
                               Column(
                                 children: (_currentQuestionData["options"] as List).map<Widget>((option) {
@@ -769,5 +871,161 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
         ],
       ),
     );
+  }
+}
+
+
+class MathContentWidget extends StatelessWidget {
+  final String content;
+
+  const MathContentWidget({super.key, required this.content});
+
+  @override
+  Widget build(BuildContext context) {
+    // Check for math content
+    if (content.contains(r'$$') || content.contains(r'$')) {
+      return MathRenderer(mathText: content);
+    } 
+    // Check for markdown content
+    else if (content.contains('|') || 
+             content.contains('#') || 
+             content.contains('*') ||
+             content.contains('```')) {
+      return Markdown(
+        data: content,
+        selectable: true,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+      );
+    } 
+    // Plain text
+    else {
+      return Text(content, style: const TextStyle(fontSize: 16));
+    }
+  }
+}
+
+class MathRenderer extends StatelessWidget {
+  final String mathText;
+
+  const MathRenderer({super.key, required this.mathText});
+
+  @override
+  Widget build(BuildContext context) {
+    // Split the text by newlines first to handle paragraphs
+    final paragraphs = mathText.split(r'\n');
+    List<Widget> paragraphWidgets = [];
+
+    for (String paragraph in paragraphs) {
+      if (paragraph.isEmpty) {
+        // Add an empty space for blank lines
+        paragraphWidgets.add(const SizedBox(height: 16));
+        continue;
+      }
+
+      // Process each paragraph separately
+      List<InlineSpan> spans = [];
+      String remainingText = paragraph;
+      
+      while (remainingText.isNotEmpty) {
+        // Check for display math first ($$...$$)
+        final displayMathMatch = RegExp(r'\$\$(.*?)\$\$', dotAll: true).firstMatch(remainingText);
+        
+        if (displayMathMatch != null && displayMathMatch.start == 0) {
+          // Handle display math at the beginning of the paragraph
+          // For display math, we want to create a separate widget
+          if (spans.isNotEmpty) {
+            // Add the accumulated text spans as a RichText widget
+            paragraphWidgets.add(RichText(text: TextSpan(children: spans, style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            fontSize: 16
+                          ),)));
+            spans = [];
+          }
+          
+          String mathExpression = displayMathMatch.group(1)!.trim();
+          paragraphWidgets.add(_buildDisplayMath(mathExpression));
+          remainingText = remainingText.substring(displayMathMatch.end);
+          continue;
+        } 
+        
+        // Check for inline math ($...$)
+        final inlineMathMatch = RegExp(r'\$(.*?)\$').firstMatch(remainingText);
+        
+        if (inlineMathMatch != null) {
+          // Add text before the math expression as a TextSpan
+          if (inlineMathMatch.start > 0) {
+            final textBefore = remainingText.substring(0, inlineMathMatch.start);
+            spans.add(TextSpan(text: textBefore));
+          }
+          
+          // Add the math expression as an inline widget span
+          String mathExpression = inlineMathMatch.group(1)!;
+          spans.add(WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: _buildInlineMath(mathExpression),
+          ));
+          
+          // Update remaining text
+          remainingText = remainingText.substring(inlineMathMatch.end);
+        } else {
+          // No more math expressions, add the remaining text
+          spans.add(TextSpan(text: remainingText));
+          break;
+        }
+      }
+
+      // Add any remaining spans for this paragraph
+      if (spans.isNotEmpty) {
+        paragraphWidgets.add(RichText(
+          text: TextSpan(
+            children: spans,
+            style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 16),
+          ),
+        ));
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: paragraphWidgets,
+    );
+  }
+  
+  // Helper for display math
+  Widget _buildDisplayMath(String expression) {
+    // Clean the expression
+    expression = _cleanMathExpression(expression);
+    
+    return Container(
+      width: double.infinity,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Math.tex(
+        expression,
+        textStyle: const TextStyle(fontSize: 18),
+        mathStyle: MathStyle.display,
+        onErrorFallback: (FlutterMathException e) => 
+            Text("Math error: ${e.message}", style: const TextStyle(color: Colors.red)),
+      ),
+    );
+  }
+  
+  // Helper for inline math
+  Widget _buildInlineMath(String expression) {
+    // Clean the expression
+    expression = _cleanMathExpression(expression);
+    
+    return Math.tex(
+      expression,
+      textStyle: const TextStyle(fontSize: 16),
+      onErrorFallback: (FlutterMathException e) => 
+          Text("Math error: ${e.message}", style: const TextStyle(color: Colors.red, fontSize: 14)),
+    );
+  }
+  
+  // Clean math expressions
+  String _cleanMathExpression(String expression) {
+    // Replace double backslashes with single ones for TeX
+    return expression.replaceAll(r'\\', r'\');
   }
 }

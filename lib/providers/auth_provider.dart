@@ -48,8 +48,10 @@ class AuthProvider extends ChangeNotifier {
         final windowsInfo = await _deviceInfo.windowsInfo;
         return windowsInfo.computerName;
       }
+      
       return 'Unknown Device';
     } catch (e) {
+      return 'abcd';
       return 'Unknown Device';
     }
   }
@@ -69,8 +71,10 @@ class AuthProvider extends ChangeNotifier {
         final windowsInfo = await _deviceInfo.windowsInfo;
         return windowsInfo.deviceId;
       }
+      
       return 'unknown';
     } catch (e) {
+      return '1234';
       return 'unknown';
     }
   }
@@ -83,6 +87,9 @@ class AuthProvider extends ChangeNotifier {
 
       final deviceName = await _getDeviceName();
       final deviceId = await _getDeviceId();
+
+      print(deviceId);
+      print(deviceName);
 
       final authResponse = await _api.login(
         activationCode: activationCode,

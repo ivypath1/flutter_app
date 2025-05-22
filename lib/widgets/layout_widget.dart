@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:ivy_path/providers/auth_provider.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -6,6 +8,8 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final auth = context.watch<AuthProvider>();
+    final user = auth.authData?.user;
     
     return Container(
       width: 280,
@@ -42,7 +46,7 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.dashboard,
                   title: 'Dashboard',
                   isSelected: true,
-                  onTap: () {},
+                  onTap: () {Navigator.pushNamed(context, '/dashboard');},
                 ),
                 _DrawerItem(
                   icon: Icons.question_answer,
@@ -52,12 +56,17 @@ class AppDrawer extends StatelessWidget {
                 _DrawerItem(
                   icon: Icons.book,
                   title: 'Premium Materials',
-                  onTap: () {},
+                  onTap: () {Navigator.pushNamed(context, '/materials');},
                 ),
                 _DrawerItem(
                   icon: Icons.trending_up,
                   title: 'My Progress',
                   onTap: () {},
+                ),
+                _DrawerItem(
+                  icon: Icons.book,
+                  title: 'Discussion forum',
+                  onTap: () {Navigator.pushNamed(context, '/forum');},
                 ),
                 _DrawerItem(
                   icon: Icons.notifications,
@@ -76,7 +85,7 @@ class AppDrawer extends StatelessWidget {
           _DrawerItem(
             icon: Icons.logout,
             title: 'Logout',
-            onTap: () {},
+            onTap: () => auth.logout(),
           ),
           const Divider(),
           // User Profile Section
@@ -85,42 +94,45 @@ class AppDrawer extends StatelessWidget {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 24,
                     backgroundImage: NetworkImage(
-                      'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
+                      user?.image ?? 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Daniel Johnson',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user != null 
+                            ? '${user.firstName} ${user.lastName}'
+                            : 'Guest User',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      Text(
-                        'Premium Member',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                        Text(
+                          user?.program ?? 'No Program',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-        //   const SizedBox(height: 16),
         ],
       ),
     );
   }
 }
-
-
 
 class _DrawerItem extends StatelessWidget {
   final IconData icon;
@@ -156,8 +168,6 @@ class _DrawerItem extends StatelessWidget {
     );
   }
 }
-
-
 
 class IvyAppBar extends StatelessWidget {
   final String title;
@@ -198,55 +208,43 @@ class IvyAppBar extends StatelessWidget {
   }
 }
 
-
-
 class IvyNavRail extends StatelessWidget {
-  // final int? active;
-
-  const IvyNavRail({
-    super.key,
-    // required this.active
-  });
+  const IvyNavRail({super.key});
 
   @override
   Widget build(BuildContext context) {
-    
     return NavigationRail(
-              extended: false,
-              destinations: const [
-                NavigationRailDestination(
-                  icon: Icon(Icons.dashboard),
-                  label: Text('Dashboard'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.question_answer),
-                  label: Text('Practice'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.book),
-                  label: Text('Materials'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.trending_up),
-                  label: Text('Progress'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.notifications),
-                  label: Text('Notifications'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.person),
-                  label: Text('Profile'),
-                ),
-              ],
-              selectedIndex: 0,
-              onDestinationSelected: (index) {
-                // Handle navigation
-              },
-            );
+      extended: false,
+      destinations: const [
+        NavigationRailDestination(
+          icon: Icon(Icons.dashboard),
+          label: Text('Dashboard'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.question_answer),
+          label: Text('Practice'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.book),
+          label: Text('Materials'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.trending_up),
+          label: Text('Progress'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.notifications),
+          label: Text('Notifications'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.person),
+          label: Text('Profile'),
+        ),
+      ],
+      selectedIndex: 0,
+      onDestinationSelected: (index) {
+        // Handle navigation
+      },
+    );
   }
 }
-
-
-
-

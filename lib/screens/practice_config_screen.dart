@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:ivy_path/models/subject_model.dart';
+import 'package:ivy_path/providers/practice_subject.dart';
 import 'package:ivy_path/screens/session_screen.dart';
 import 'package:ivy_path/utitlity/responsiveness.dart';
 import 'package:ivy_path/widgets/layout_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:provider/provider.dart';
 
 class QuestionsPage extends StatefulWidget {
   const QuestionsPage({super.key});
@@ -13,14 +16,14 @@ class QuestionsPage extends StatefulWidget {
 }
 
 class _QuestionsPageState extends State<QuestionsPage> {
+  late final PracticeConfigProvider _provider;
   String? _mode;
-  final List<String> _selectedSubjects = [];
-  final Map<String, Map<String, dynamic>> _subjectSettings = {};
+  final List<int> _selectedSubjects = [];
+  final List<Map<String, dynamic>> _subjectSettings = [];
   String _duration = "60";
   bool _shuffleQuestions = false;
   bool _shuffleOptions = false;
   String _selectedType = "all";
-  final List<String> _selectedMockSubjects = [];
 
   final List<Map<String, dynamic>> _practiceModes = [
     {
@@ -43,39 +46,30 @@ class _QuestionsPageState extends State<QuestionsPage> {
     },
   ];
 
-  final List<Map<String, dynamic>> _subjects = [
-    {
-      "id": "mathematics",
-      "name": "Mathematics",
-      "sections": ["Algebra", "Calculus", "Statistics"],
-      "maxQuestions": 5,
-    },
-    {
-      "id": "english",
-      "name": "English Language",
-      "sections": ["Grammar", "Comprehension", "Vocabulary"],
-      "maxQuestions": 5,
-    },
-    {
-      "id": "physics",
-      "name": "Physics",
-      "sections": ["Mechanics", "Waves", "Electricity"],
-      "maxQuestions": 5,
-    },
-    {
-      "id": "chemistry",
-      "name": "Chemistry",
-      "sections": ["Physical", "Organic", "Inorganic"],
-      "maxQuestions": 5,
-    },
-  ];
 
-  final List<Map<String, dynamic>> _mockSubjects = [
-    {"id": "mathematics", "name": "Mathematics", "questions": 40},
-    {"id": "english", "name": "English Language", "questions": 50},
-    {"id": "physics", "name": "Physics", "questions": 40},
-    {"id": "chemistry", "name": "Chemistry", "questions": 40},
-  ];
+  List<Map<String, dynamic>> get _subjects {
+    return _provider.subjects.map((subject) {
+      return {
+        "id": subject.id,
+        "name": subject.name,
+        "sections": subject.sections,
+        "maxQuestions": 5,
+        "section": subject.sections
+      };
+    }).toList();
+  }
+
+  // Convert provider subjects to mock format
+  List<Map<String, dynamic>> get _mockSubjects {
+    return _provider.subjects.map((subject) {
+      return {
+        "id": subject.id,
+        "name": subject.name,
+        "questions": 40, // Default mock exam question count
+        "section": subject.sections
+      };
+    }).toList();
+  }
 
   final List<Map<String, dynamic>> _selectTypes = [
     {"value": "all", "label": "All"},
@@ -84,33 +78,26 @@ class _QuestionsPageState extends State<QuestionsPage> {
     {"value": "section3", "label": "Section 3"},
   ];
 
-  void _handleSubjectToggle(String subjectId) {
+  void _handleSubjectToggle(int subjectId) {
+    print(subjectId);
     setState(() {
       if (_selectedSubjects.contains(subjectId)) {
         _selectedSubjects.remove(subjectId);
-        _subjectSettings.remove(subjectId);
+
+        _subjectSettings.removeWhere((item) => item['id'] == subjectId);
       } else {
         if (_selectedSubjects.length < 4) {
           _selectedSubjects.add(subjectId);
-          _subjectSettings[subjectId] = {"questions": 5, "section": "all"};
+          _subjectSettings.add({"id": subjectId, "section": 0, "questions": 5});
         }
       }
     });
   }
 
-  void _handleMockSubjectToggle(String subjectId) {
+  void _updateSubjectSettings(int subjectId, String field, dynamic value) {
+    int index = _subjectSettings.indexWhere((item) => item['id'] == subjectId);
     setState(() {
-      if (_selectedMockSubjects.contains(subjectId)) {
-        _selectedMockSubjects.remove(subjectId);
-      } else {
-        _selectedMockSubjects.add(subjectId);
-      }
-    });
-  }
-
-  void _updateSubjectSettings(String subjectId, String field, dynamic value) {
-    setState(() {
-      _subjectSettings[subjectId]?[field] = value;
+      _subjectSettings[index][field] = value;
     });
   }
 
@@ -122,8 +109,8 @@ class _QuestionsPageState extends State<QuestionsPage> {
         "subjects": _selectedSubjects.map((subjectId) {
           return {
             "id": subjectId,
-            "questions": _subjectSettings[subjectId]?["questions"] ?? 5,
-            "section": _subjectSettings[subjectId]?["section"] ?? "all",
+            "questions": _subjectSettings[_subjectSettings.indexWhere((item) => item['id'] == subjectId)]["questions"] ?? 5,
+            "section": _subjectSettings[_subjectSettings.indexWhere((item) => item['id'] == subjectId)]["section"] ?? "all",
           };
         }).toList(),
         "duration": double.tryParse(_duration) ?? 60, // Default to 60 if parsing fails
@@ -135,7 +122,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
     else {
       return {
         "mode": "mock",
-        "subjects": _selectedMockSubjects.map((subjectId) {
+        "subjects": _subjects.map((subjectId) {
           final subject = _mockSubjects.firstWhere((s) => s["id"] == subjectId);
           return {
             "id": subjectId,
@@ -149,6 +136,17 @@ class _QuestionsPageState extends State<QuestionsPage> {
       };
     }
   }
+
+   @override
+  void initState() {
+    super.initState();
+    _provider = context.read<PracticeConfigProvider>();
+    // Load subjects if not already loaded
+    if (_provider.loadingStatus == LoadingStatus.initial) {
+      _provider.loadSubjects();
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -169,796 +167,835 @@ class _QuestionsPageState extends State<QuestionsPage> {
       //   ),
       //   title: const Text('Practice Setup'),
       // ),
-      body: Row(
-        children: [
-          if (isDesktop) const AppDrawer(),
-          if (isTablet && !isDesktop)
-            const IvyNavRail(),
+      body: Consumer<PracticeConfigProvider>(
+        builder: (context, provider, child) {
+          // Show loading state
+          if (provider.loadingStatus == LoadingStatus.loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
           
-          Expanded(
-            child: CustomScrollView(
-              slivers: [
-                IvyAppBar(
-                  title: 'Practice Setup',
-                  showMenuButton: !isDesktop,
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: mediaSetup(size, md: 16, lg: 100), vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Card(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
-                          shape: RoundedRectangleBorder(
-                            side: BorderSide(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  color: Theme.of(context).colorScheme.primary,
+           // Show error state
+          if (provider.loadingStatus == LoadingStatus.error) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(provider.errorMessage),
+                  ElevatedButton(
+                    onPressed: provider.loadSubjects,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Row(
+            children: [
+              if (isDesktop) const AppDrawer(),
+              if (isTablet && !isDesktop)
+                const IvyNavRail(),
+              
+              Expanded(
+                child: CustomScrollView(
+                  slivers: [
+                    IvyAppBar(
+                      title: 'Practice Setup',
+                      showMenuButton: !isDesktop,
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: mediaSetup(size, md: 16, lg: 100), vertical: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Card(
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                              shape: RoundedRectangleBorder(
+                                side: BorderSide(
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Demo Version",
-                                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      RichText(
-                                        text: TextSpan(
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
-                                          ),
-                                          children: [
-                                            const TextSpan(text: "You're using the demo version with limited features. "),
-                                            TextSpan(
-                                              text: "Subscribe to Premium",
-                                              style: TextStyle(
-                                                color: Theme.of(context).colorScheme.primary,
-                                                decoration: TextDecoration.underline,
-                                              ),
-                                            ),
-                                            const TextSpan(text: " or "),
-                                            TextSpan(
-                                              text: "download our app",
-                                              style: TextStyle(
-                                                color: Theme.of(context).colorScheme.primary,
-                                                decoration: TextDecoration.underline,
-                                              ),
-                                            ),
-                                            const TextSpan(text: " for full access."),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ).animate().fadeIn().slideY(
-                          begin: 0.2,
-                          duration: 500.ms,
-                          delay: 100.ms,
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        Text(
-                          "Practice Setup",
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Configure your practice session",
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
                                   children: [
-                                    Text(
-                                      "Select Practice Mode",
-                                      style: Theme.of(context).textTheme.labelLarge,
+                                    Icon(
+                                      Icons.info_outline,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
-                                    const SizedBox(height: 8),
-                                    DropdownButtonFormField<String>(
-                                      value: _mode,
-                                      items: _practiceModes.map((mode) {
-                                        return DropdownMenuItem<String>(
-                                          value: mode["value"],
-                                          child: Row(
-                                            children: [
-                                              Icon(mode["icon"], size: 20),
-                                              const SizedBox(width: 8),
-                                              Text(mode["label"]),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _mode = value;
-                                        });
-                                      },
-                                      decoration: const InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        isDense: true,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                
-                                if (selectedMode.isNotEmpty) ...[
-                                  const SizedBox(height: 16),
-                                  Card(
-                                    color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: Row(
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Icon(
-                                            Icons.info_outline,
-                                            color: Theme.of(context).colorScheme.primary,
-                                            size: 20,
+                                          Text(
+                                            "Demo Version",
+                                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              selectedMode["description"],
-                                              style: Theme.of(context).textTheme.bodySmall,
+                                          const SizedBox(height: 4),
+                                          RichText(
+                                            text: TextSpan(
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                                              ),
+                                              children: [
+                                                const TextSpan(text: "You're using the demo version with limited features. "),
+                                                TextSpan(
+                                                  text: "Subscribe to Premium",
+                                                  style: TextStyle(
+                                                    color: Theme.of(context).colorScheme.primary,
+                                                    decoration: TextDecoration.underline,
+                                                  ),
+                                                ),
+                                                const TextSpan(text: " or "),
+                                                TextSpan(
+                                                  text: "download our app",
+                                                  style: TextStyle(
+                                                    color: Theme.of(context).colorScheme.primary,
+                                                    decoration: TextDecoration.underline,
+                                                  ),
+                                                ),
+                                                const TextSpan(text: " for full access."),
+                                              ],
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  ),
-                                ],
-                                
-                                if (_mode != null && _mode != "mock") ...[
-                                  const SizedBox(height: 24),
-                                  if (_mode == "practice") ...[
+                                  ],
+                                ),
+                              ),
+                            ).animate().fadeIn().slideY(
+                              begin: 0.2,
+                              duration: 500.ms,
+                              delay: 100.ms,
+                            ),
+                            
+                            const SizedBox(height: 24),
+                            
+                            Text(
+                              "Practice Setup",
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Configure your practice session",
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 24),
+                            
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Row(
-                                          children: [
-                                            Text(
-                                              "Duration (minutes)",
-                                              style: Theme.of(context).textTheme.labelLarge,
-                                            ),
-                                            const SizedBox(width: 16),
-                                            SizedBox(
-                                              width: 100,
-                                              child: TextFormField(
-                                                initialValue: _duration,
-                                                onChanged: (value) => setState(() => _duration = value),
-                                                keyboardType: TextInputType.number,
-                                                decoration: const InputDecoration(
-                                                  isDense: true,
-                                                  border: OutlineInputBorder(),
+                                        Text(
+                                          "Select Mode",
+                                          style: Theme.of(context).textTheme.labelLarge,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        DropdownButtonFormField<String>(
+                                          value: _mode,
+                                          items: _practiceModes.map((mode) {
+                                            return DropdownMenuItem<String>(
+                                              value: mode["value"],
+                                              child: Row(
+                                                children: [
+                                                  Icon(mode["icon"], size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Text(mode["label"]),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _mode = value;
+                                            });
+                                          },
+                                          decoration: const InputDecoration(
+                                            border: OutlineInputBorder(),
+                                            isDense: true,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    
+                                    if (selectedMode.isNotEmpty) ...[
+                                      const SizedBox(height: 16),
+                                      Card(
+                                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.info_outline,
+                                                color: Theme.of(context).colorScheme.primary,
+                                                size: 20,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  selectedMode["description"],
+                                                  style: Theme.of(context).textTheme.bodySmall,
                                                 ),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                        const SizedBox(height: 16),
+                                      ),
+                                    ],
+                                    
+                                    if (_mode != null && _mode != "mock") ...[
+                                      const SizedBox(height: 24),
+                                      if (_mode == "practice") ...[
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Row(
                                               children: [
-                                                Checkbox(
-                                                  value: _shuffleQuestions,
-                                                  onChanged: null, // Disabled for demo
-                                                ),
-                                                const SizedBox(width: 8),
                                                 Text(
-                                                  "Shuffle Questions",
-                                                  style: Theme.of(context).textTheme.bodyMedium,
+                                                  "Duration (minutes)",
+                                                  style: Theme.of(context).textTheme.labelLarge,
                                                 ),
-                                                const SizedBox(width: 8),
-                                                const Chip(
-                                                  label: Text("Premium"),
-                                                  side: BorderSide.none,
-                                                  visualDensity: VisualDensity.compact,
+                                                const SizedBox(width: 16),
+                                                SizedBox(
+                                                  width: 100,
+                                                  child: TextFormField(
+                                                    initialValue: _duration,
+                                                    onChanged: (value) => setState(() => _duration = value),
+                                                    keyboardType: TextInputType.number,
+                                                    decoration: const InputDecoration(
+                                                      isDense: true,
+                                                      border: OutlineInputBorder(),
+                                                    ),
+                                                  ),
                                                 ),
                                               ],
                                             ),
-                                            Row(
+                                            const SizedBox(height: 16),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Checkbox(
-                                                  value: _shuffleOptions,
-                                                  onChanged: null, // Disabled for demo
+                                                Row(
+                                                  children: [
+                                                    Checkbox(
+                                                      value: _shuffleQuestions,
+                                                      // onChanged: null, // Disabled for demo
+                                                      onChanged: (value){
+                                                        setState(() {
+                                                          _shuffleQuestions = value!;
+                                                        });
+                                                      }, // Disabled for demo
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      "Shuffle Questions",
+                                                      style: Theme.of(context).textTheme.bodyMedium,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    const Chip(
+                                                      label: Text("Premium"),
+                                                      side: BorderSide.none,
+                                                      visualDensity: VisualDensity.compact,
+                                                    ),
+                                                  ],
                                                 ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  "Shuffle Options",
-                                                  style: Theme.of(context).textTheme.bodyMedium,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                const Chip(
-                                                  label: Text("Premium"),
-                                                  side: BorderSide.none,
-                                                  visualDensity: VisualDensity.compact,
+                                                Row(
+                                                  children: [
+                                                    Checkbox(
+                                                      value: _shuffleOptions,
+                                                      // onChanged: null, // Disabled for demo
+                                                      onChanged: (value){
+                                                        setState(() {
+                                                          _shuffleOptions = value!;
+                                                        });
+                                                      }, // Disabled for demo
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      "Shuffle Options",
+                                                      style: Theme.of(context).textTheme.bodyMedium,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    const Chip(
+                                                      label: Text("Premium"),
+                                                      side: BorderSide.none,
+                                                      visualDensity: VisualDensity.compact,
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),
                                           ],
                                         ),
                                       ],
-                                    ),
-                                  ],
-                                  
-                                  const SizedBox(height: 24),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      
+                                      const SizedBox(height: 24),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            "Select Subjects (Max 4)",
-                                            style: Theme.of(context).textTheme.labelLarge,
-                                          ),
-                                          Text(
-                                            "${_selectedSubjects.length}/4 selected",
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      StaggeredGrid.count(
-                                        crossAxisCount: mediaSetup(size, sm: 1, md: 2).toInt(),
-                                        mainAxisSpacing: 12,
-                                        crossAxisSpacing: 12,
-                                        children: _subjects.map((subject) {
-                                          final isSelected = _selectedSubjects.contains(subject["id"]);
-                                          final isDisabled = _selectedSubjects.length >= 4 && !isSelected;
-                                          
-                                          return StaggeredGridTile.fit(
-                                            crossAxisCellCount: 1,
-                                            child: Card(
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(12),
-                                                side: BorderSide(
-                                                  color: isSelected
-                                                      ? Theme.of(context).colorScheme.primary
-                                                      : Theme.of(context).dividerColor,
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                "Select Subjects (Max 4)",
+                                                style: Theme.of(context).textTheme.labelLarge,
+                                              ),
+                                              Text(
+                                                "${_selectedSubjects.length}/4 selected",
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                                                 ),
                                               ),
-                                              color: isDisabled
-                                                  ? Theme.of(context).disabledColor.withOpacity(0.05)
-                                                  : null,
-                                              child: InkWell(
-                                                onTap: isDisabled ? null : () => _handleSubjectToggle(subject["id"]),
-                                                borderRadius: BorderRadius.circular(12),
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(12),
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Row(
-                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          StaggeredGrid.count(
+                                            crossAxisCount: mediaSetup(size, sm: 1, md: 2).toInt(),
+                                            mainAxisSpacing: 12,
+                                            crossAxisSpacing: 12,
+                                            children: _subjects.map((subject) {
+                                              final isSelected = _selectedSubjects.contains(subject["id"]);
+                                              final isDisabled = _selectedSubjects.length >= 4 && !isSelected;
+                                              
+                                              return StaggeredGridTile.fit(
+                                                crossAxisCellCount: 1,
+                                                child: Card(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    side: BorderSide(
+                                                      color: isSelected
+                                                          ? Theme.of(context).colorScheme.primary
+                                                          : Theme.of(context).dividerColor,
+                                                    ),
+                                                  ),
+                                                  color: isDisabled
+                                                      ? Theme.of(context).disabledColor.withOpacity(0.05)
+                                                      : null,
+                                                  child: InkWell(
+                                                    onTap: isDisabled ? null : () => _handleSubjectToggle(subject["id"]),
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(12),
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: [
                                                           Row(
+                                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                             children: [
-                                                              Container(
-                                                                width: 20,
-                                                                height: 20,
-                                                                decoration: BoxDecoration(
-                                                                  shape: BoxShape.circle,
-                                                                  border: Border.all(
-                                                                    color: isSelected
-                                                                        ? Theme.of(context).colorScheme.primary
-                                                                        : Theme.of(context).dividerColor,
+                                                              Row(
+                                                                children: [
+                                                                  Container(
+                                                                    width: 20,
+                                                                    height: 20,
+                                                                    decoration: BoxDecoration(
+                                                                      shape: BoxShape.circle,
+                                                                      border: Border.all(
+                                                                        color: isSelected
+                                                                            ? Theme.of(context).colorScheme.primary
+                                                                            : Theme.of(context).dividerColor,
+                                                                      ),
+                                                                      color: isSelected
+                                                                          ? Theme.of(context).colorScheme.primary
+                                                                          : Colors.transparent,
+                                                                    ),
+                                                                    child: isSelected
+                                                                        ? Icon(
+                                                                            Icons.check,
+                                                                            size: 14,
+                                                                            color: Theme.of(context).colorScheme.onPrimary,
+                                                                          )
+                                                                        : null,
                                                                   ),
-                                                                  color: isSelected
-                                                                      ? Theme.of(context).colorScheme.primary
-                                                                      : Colors.transparent,
-                                                                ),
-                                                                child: isSelected
-                                                                    ? Icon(
-                                                                        Icons.check,
-                                                                        size: 14,
-                                                                        color: Theme.of(context).colorScheme.onPrimary,
-                                                                      )
-                                                                    : null,
+                                                                  const SizedBox(width: 8),
+                                                                  Text(
+                                                                    subject["name"],
+                                                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                                      fontWeight: FontWeight.bold,
+                                                                    ),
+                                                                  ),
+                                                                ],
                                                               ),
-                                                              const SizedBox(width: 8),
-                                                              Text(
-                                                                subject["name"],
-                                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                                  fontWeight: FontWeight.bold,
-                                                                ),
+                                                              const Chip(
+                                                                label: Text("Demo"),
+                                                                side: BorderSide.none,
+                                                                visualDensity: VisualDensity.compact,
                                                               ),
                                                             ],
                                                           ),
-                                                          const Chip(
-                                                            label: Text("Demo"),
-                                                            side: BorderSide.none,
-                                                            visualDensity: VisualDensity.compact,
-                                                          ),
+                                                          
+                                                          if (isSelected) ...[
+                                                            const SizedBox(height: 12),
+                                                            Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: [
+                                                                Text(
+                                                                  "Questions (Max 5)",
+                                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(height: 4),
+                                                                TextFormField(
+                                                                  initialValue: _subjectSettings[_subjectSettings.indexWhere((item) => item['id'] == subject["id"])]["questions"]?.toString() ?? "5",
+                                                                  onChanged: (value) {
+                                                                    final num = int.tryParse(value) ?? 5;
+                                                                    _updateSubjectSettings(
+                                                                      subject["id"],
+                                                                      "questions",
+                                                                      num.clamp(1, 5),
+                                                                    );
+                                                                  },
+                                                                  keyboardType: TextInputType.number,
+                                                                  decoration: const InputDecoration(
+                                                                    isDense: true,
+                                                                    border: OutlineInputBorder(),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            
+                                                            const SizedBox(height: 12),
+                                                            Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: [
+                                                                Text(
+                                                                  "Type",
+                                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(height: 4),
+                                                                DropdownButtonFormField<int>(
+                                                                  value: _subjectSettings[_subjectSettings.indexWhere((item) => item['id'] == subject["id"])]["section"] ?? 0,
+                                                                  items: [
+                                                                    const DropdownMenuItem(
+                                                                      value: 0,
+                                                                      child: Text("All"),
+                                                                    ),
+                                                                    ...(subject["sections"] as List<Section>).map((Section section) {
+                                                                      return DropdownMenuItem(
+                                                                        value: section.id,
+                                                                        child: Row(
+                                                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                          children: [
+                                                                            Text(section.name),
+                                                                            const Chip(
+                                                                              label: Text("Premium"),
+                                                                              side: BorderSide.none,
+                                                                              visualDensity: VisualDensity.compact,
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      );
+                                                                    }),
+                                                                  ],
+                                                                  onChanged: (value) {
+                                                                    _updateSubjectSettings(
+                                                                      subject["id"],
+                                                                      "section",
+                                                                      value,
+                                                                    );
+                                                                    
+                                                                  },
+                                                                  decoration: const InputDecoration(
+                                                                    isDense: true,
+                                                                    border: OutlineInputBorder(),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ],
                                                         ],
                                                       ),
-                                                      
-                                                      if (isSelected) ...[
-                                                        const SizedBox(height: 12),
-                                                        Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: [
-                                                            Text(
-                                                              "Questions (Max 5)",
-                                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
-                                                              ),
-                                                            ),
-                                                            const SizedBox(height: 4),
-                                                            TextFormField(
-                                                              initialValue: _subjectSettings[subject["id"]]?["questions"]?.toString() ?? "5",
-                                                              onChanged: (value) {
-                                                                final num = int.tryParse(value) ?? 5;
-                                                                _updateSubjectSettings(
-                                                                  subject["id"],
-                                                                  "questions",
-                                                                  num.clamp(1, 5),
-                                                                );
-                                                              },
-                                                              keyboardType: TextInputType.number,
-                                                              decoration: const InputDecoration(
-                                                                isDense: true,
-                                                                border: OutlineInputBorder(),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        
-                                                        const SizedBox(height: 12),
-                                                        Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: [
-                                                            Text(
-                                                              "Type",
-                                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
-                                                              ),
-                                                            ),
-                                                            const SizedBox(height: 4),
-                                                            DropdownButtonFormField<String>(
-                                                              value: _subjectSettings[subject["id"]]?["section"] ?? "all",
-                                                              items: [
-                                                                DropdownMenuItem(
-                                                                  value: "all",
-                                                                  child: Text("All"),
-                                                                ),
-                                                                ...(subject["sections"] as List<String>).map((section) {
-                                                                  return DropdownMenuItem(
-                                                                    value: section,
-                                                                    child: Row(
-                                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                                      children: [
-                                                                        Text("Section ${subject["sections"].indexOf(section) + 1}"),
-                                                                        const Chip(
-                                                                          label: Text("Premium"),
-                                                                          side: BorderSide.none,
-                                                                          visualDensity: VisualDensity.compact,
-                                                                        ),
-                                                                      ],
-                                                                    ),
-                                                                  );
-                                                                }).toList(),
-                                                              ],
-                                                              onChanged: (value) {
-                                                                if (value == "all") {
-                                                                  _updateSubjectSettings(
-                                                                    subject["id"],
-                                                                    "section",
-                                                                    value,
-                                                                  );
-                                                                }
-                                                              },
-                                                              decoration: const InputDecoration(
-                                                                isDense: true,
-                                                                border: OutlineInputBorder(),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ],
-                                                    ],
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ],
-                                  ),
-                                  
-                                  const SizedBox(height: 16),
-                                  Card(
-                                    color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                "Total Questions",
-                                                style: Theme.of(context).textTheme.labelLarge,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                "${_selectedSubjects.fold<int>(0, (total, subjectId) => total + ((_subjectSettings[subjectId]?["questions"] ?? 0) as int))} questions",
-                                                style: Theme.of(context).textTheme.bodySmall,
-                                              ),
-                                            ],
-                                          ),
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
-                                            children: [
-                                              Text(
-                                                "Duration",
-                                                style: Theme.of(context).textTheme.labelLarge,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                _mode == "practice" ? "$_duration minutes" : "Unlimited",
-                                                style: Theme.of(context).textTheme.bodySmall,
-                                              ),
-                                            ],
+                                              );
+                                            }).toList(),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                  ),
-                                ],
-                                
-                                if (_mode == "mock") ...[
-                                  const SizedBox(height: 24),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Select Type",
-                                        style: Theme.of(context).textTheme.labelLarge,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      DropdownButtonFormField<String>(
-                                        value: _selectedType,
-                                        items: _selectTypes.map((type) {
-                                          return DropdownMenuItem<String>(
-                                            value: type["value"],
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(type["label"]),
-                                                if (type["value"] != "all")
-                                                  const Chip(
-                                                    label: Text("Premium"),
-                                                    side: BorderSide.none,
-                                                    visualDensity: VisualDensity.compact,
+                                      
+                                      const SizedBox(height: 16),
+                                      Card(
+                                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    "Total Questions",
+                                                    style: Theme.of(context).textTheme.labelLarge,
                                                   ),
-                                              ],
-                                            ),
-                                          );
-                                        }).toList(),
-                                        onChanged: (value) {
-                                          if (value == "all") {
-                                            setState(() {
-                                              _selectedType = value ?? "all";
-                                            });
-                                          }
-                                        },
-                                        decoration: const InputDecoration(
-                                          border: OutlineInputBorder(),
-                                          isDense: true,
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    "${_selectedSubjects.fold<int>(0, (total, subjectId) {
+                                                      int index = _subjectSettings.indexWhere((item) => item['id'] == subjectId);
+                                                      return total + ((_subjectSettings[index]["questions"] ?? 0) as int);
+                                                    })} questions",
+                                                    style: Theme.of(context).textTheme.bodySmall,
+                                                  ),
+                                                ],
+                                              ),
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.end,
+                                                children: [
+                                                  Text(
+                                                    "Duration",
+                                                    style: Theme.of(context).textTheme.labelLarge,
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    _mode == "practice" ? "$_duration minutes" : "Unlimited",
+                                                    style: Theme.of(context).textTheme.bodySmall,
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ],
-                                  ),
-                                  
-                                  const SizedBox(height: 24),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    
+                                    if (_mode == "mock") ...[
+                                      const SizedBox(height: 24),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            "Program Subjects",
+                                            "Select Type",
                                             style: Theme.of(context).textTheme.labelLarge,
                                           ),
-                                          Text(
-                                            "${_selectedMockSubjects.length}/4 selected",
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                                          const SizedBox(height: 8),
+                                          DropdownButtonFormField<String>(
+                                            value: _selectedType,
+                                            items: _selectTypes.map((type) {
+                                              return DropdownMenuItem<String>(
+                                                value: type["value"],
+                                                child: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Text(type["label"]),
+                                                    if (type["value"] != "all")
+                                                      const Chip(
+                                                        label: Text("Premium"),
+                                                        side: BorderSide.none,
+                                                        visualDensity: VisualDensity.compact,
+                                                      ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                            onChanged: (value) {
+                                              if (value == "all") {
+                                                setState(() {
+                                                  _selectedType = value ?? "all";
+                                                });
+                                              }
+                                            },
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                              isDense: true,
                                             ),
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 12),
-                                      StaggeredGrid.count(
-                                        crossAxisCount: mediaSetup(size, sm: 1, md: 2).toInt(),
-                                        mainAxisSpacing: 12,
-                                        crossAxisSpacing: 12,
-                                        children: _mockSubjects.map((subject) {
-                                          final isSelected = _selectedMockSubjects.contains(subject["id"]);
-                                          // final isDisabled = _selectedSubjects.length >= 4 && !isSelected;
-                                          
-                                          return StaggeredGridTile.fit(
-                                            crossAxisCellCount: 1,
-                                            child: Card(
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(12),
-                                                side: BorderSide(
-                                                  color: isSelected
-                                                      ? Theme.of(context).colorScheme.primary
-                                                      : Theme.of(context).dividerColor,
+                                      
+                                      const SizedBox(height: 24),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                "Program Subjects",
+                                                style: Theme.of(context).textTheme.labelLarge,
+                                              ),
+                                              Text(
+                                                "${_subjects.length}/4 selected",
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                                                 ),
                                               ),
-                                              child: InkWell(
-                                                onTap: () => _handleMockSubjectToggle(subject["id"]),
-                                                borderRadius: BorderRadius.circular(12),
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(12),
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Row(
-                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          StaggeredGrid.count(
+                                            crossAxisCount: mediaSetup(size, sm: 1, md: 2).toInt(),
+                                            mainAxisSpacing: 12,
+                                            crossAxisSpacing: 12,
+                                            children: _mockSubjects.map((subject) {
+                                              // final isDisabled = _selectedSubjects.length >= 4 && !isSelected;
+                                              
+                                              return StaggeredGridTile.fit(
+                                                crossAxisCellCount: 1,
+                                                child: Card(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    side: BorderSide(
+                                                      color: Theme.of(context).colorScheme.primary
+                                                    ),
+                                                  ),
+                                                  child: InkWell(
+                                                    onTap: () {},
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(12),
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: [
                                                           Row(
+                                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                             children: [
-                                                              Container(
-                                                                width: 20,
-                                                                height: 20,
-                                                                decoration: BoxDecoration(
-                                                                  shape: BoxShape.circle,
-                                                                  border: Border.all(
-                                                                    color: isSelected
-                                                                        ? Theme.of(context).colorScheme.primary
-                                                                        : Theme.of(context).dividerColor,
+                                                              Row(
+                                                                children: [
+                                                                  Container(
+                                                                    width: 20,
+                                                                    height: 20,
+                                                                    decoration: BoxDecoration(
+                                                                      shape: BoxShape.circle,
+                                                                      border: Border.all(
+                                                                        color: Theme.of(context).colorScheme.primary
+                                                                      ),
+                                                                      color: Theme.of(context).colorScheme.primary
+                                                                    ),
+                                                                    child: Icon(
+                                                                            Icons.check,
+                                                                            size: 14,
+                                                                            color: Theme.of(context).colorScheme.onPrimary,
+                                                                          ),
                                                                   ),
-                                                                  color: isSelected
-                                                                      ? Theme.of(context).colorScheme.primary
-                                                                      : Colors.transparent,
-                                                                ),
-                                                                child: isSelected
-                                                                    ? Icon(
-                                                                        Icons.check,
-                                                                        size: 14,
-                                                                        color: Theme.of(context).colorScheme.onPrimary,
-                                                                      )
-                                                                    : null,
+                                                                  const SizedBox(width: 8),
+                                                                  Text(
+                                                                    subject["name"],
+                                                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                                      fontWeight: FontWeight.bold,
+                                                                    ),
+                                                                  ),
+                                                                ],
                                                               ),
-                                                              const SizedBox(width: 8),
-                                                              Text(
-                                                                subject["name"],
-                                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                                  fontWeight: FontWeight.bold,
-                                                                ),
+                                                              Chip(
+                                                                label: Text("${subject["questions"]} "),
+                                                                side: BorderSide.none,
+                                                                visualDensity: VisualDensity.compact,
                                                               ),
                                                             ],
                                                           ),
-                                                          Chip(
-                                                            label: Text("${subject["questions"]} "),
-                                                            side: BorderSide.none,
-                                                            visualDensity: VisualDensity.compact,
-                                                          ),
                                                         ],
                                                       ),
-                                                    ],
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ],
-                                  ),
-                                  
-                                  const SizedBox(height: 16),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Checkbox(
-                                            value: _shuffleQuestions,
-                                            onChanged: null, // Disabled for demo
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            "Shuffle Questions",
-                                            style: Theme.of(context).textTheme.bodyMedium,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          const Chip(
-                                            label: Text("Premium"),
-                                            side: BorderSide.none,
-                                            visualDensity: VisualDensity.compact,
+                                              );
+                                            }).toList(),
                                           ),
                                         ],
                                       ),
-                                      Row(
+                                      
+                                      const SizedBox(height: 16),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Checkbox(
-                                            value: _shuffleOptions,
-                                            onChanged: null, // Disabled for demo
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            "Shuffle Options",
-                                            style: Theme.of(context).textTheme.bodyMedium,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          const Chip(
-                                            label: Text("Premium"),
-                                            side: BorderSide.none,
-                                            visualDensity: VisualDensity.compact,
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  
-                                  const SizedBox(height: 16),
-                                  Card(
-                                    color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                          Row(
                                             children: [
-                                              Text(
-                                                "Total Questions",
-                                                style: Theme.of(context).textTheme.labelLarge,
+                                              Checkbox(
+                                                value: _shuffleQuestions,
+                                                // onChanged: null,
+                                                onChanged: (value){
+                                                  setState(() {
+                                                    _shuffleQuestions = value!;
+                                                  });
+                                                }, // Disabled for demo
                                               ),
-                                              const SizedBox(height: 4),
+                                              const SizedBox(width: 8),
                                               Text(
-                                                "170 questions",
-                                                style: Theme.of(context).textTheme.bodySmall,
+                                                "Shuffle Questions",
+                                                style: Theme.of(context).textTheme.bodyMedium,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Chip(
+                                                label: Text("Premium"),
+                                                side: BorderSide.none,
+                                                visualDensity: VisualDensity.compact,
                                               ),
                                             ],
                                           ),
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                          Row(
                                             children: [
-                                              Text(
-                                                "Duration",
-                                                style: Theme.of(context).textTheme.labelLarge,
+                                              Checkbox(
+                                                value: _shuffleOptions,
+                                                // onChanged: null, // Disabled for demo
+                                                onChanged: (value){
+                                                  setState(() {
+                                                    _shuffleOptions = value!;
+                                                  });
+                                                },
                                               ),
-                                              const SizedBox(height: 4),
+                                              const SizedBox(width: 8),
                                               Text(
-                                                "45 minutes",
-                                                style: Theme.of(context).textTheme.bodySmall,
+                                                "Shuffle Options",
+                                                style: Theme.of(context).textTheme.bodyMedium,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Chip(
+                                                label: Text("Premium"),
+                                                side: BorderSide.none,
+                                                visualDensity: VisualDensity.compact,
                                               ),
                                             ],
                                           ),
                                         ],
+                                      ),
+                                      
+                                      const SizedBox(height: 16),
+                                      Card(
+                                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    "Total Questions",
+                                                    style: Theme.of(context).textTheme.labelLarge,
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    "170 questions",
+                                                    style: Theme.of(context).textTheme.bodySmall,
+                                                  ),
+                                                ],
+                                              ),
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.end,
+                                                children: [
+                                                  Text(
+                                                    "Duration",
+                                                    style: Theme.of(context).textTheme.labelLarge,
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    "45 minutes",
+                                                    style: Theme.of(context).textTheme.bodySmall,
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    
+                                    const SizedBox(height: 24),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: (_mode == "mock"
+                                            ? _subjects.isEmpty
+                                            : _selectedSubjects.isEmpty) || _mode == null
+                                            ? null
+                                            : () {
+                                                final config = _getSessionConfiguration();
+                                                print(config);
+                                                Navigator.push(
+                                                  context, 
+                                                  MaterialPageRoute(
+                                                    builder: (context) => SessionPage(
+                                                      mode: config["mode"],
+                                                      duration: config["duration"],
+                                                      shuffleOptions: config["shuffleOptions"],
+                                                      shuffleQuestions: config["shuffleQuestions"],
+                                                      subjects: List<Map<String, dynamic>>.from(config["subjects"]),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                        child: const Text("Start Session"),
                                       ),
                                     ),
-                                  ),
-                                ],
-                                
-                                const SizedBox(height: 24),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: (_mode == "mock"
-                                        ? _selectedMockSubjects.isEmpty
-                                        : _selectedSubjects.isEmpty) || _mode == null
-                                        ? null
-                                        : () {
-                                            final config = _getSessionConfiguration();
-                                            Navigator.push(
-                                              context, 
-                                              MaterialPageRoute(
-                                                builder: (context) => SessionPage(
-                                                  mode: config["mode"],
-                                                  duration: config["duration"],
-                                                  shuffleOptions: config["shuffleOptions"],
-                                                  shuffleQuestions: config["shuffleQuestions"],
-                                                  subjects: List<Map<String, dynamic>>.from(config["subjects"]),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                    child: const Text("Start Session"),
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                            
+                            // const SizedBox(height: 24),
+                            
+                            // Card(
+                            //   color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                            //   shape: RoundedRectangleBorder(
+                            //     side: BorderSide(
+                            //       color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                            //     ),
+                            //     borderRadius: BorderRadius.circular(12),
+                            //   ),
+                            //   child: Padding(
+                            //     padding: const EdgeInsets.all(16),
+                            //     child: Row(
+                            //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            //       children: [
+                            //         Column(
+                            //           crossAxisAlignment: CrossAxisAlignment.start,
+                            //           children: [
+                            //             Text(
+                            //               "Get Full Access",
+                            //               style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            //                 fontWeight: FontWeight.bold,
+                            //               ),
+                            //             ),
+                            //             const SizedBox(height: 4),
+                            //             Text(
+                            //               "Unlock unlimited questions, detailed explanations, and more",
+                            //               style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            //                 color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                            //               ),
+                            //             ),
+                            //           ],
+                            //         ),
+                            //         OutlinedButton.icon(
+                            //           onPressed: () {
+                            //             // Navigate to download page
+                            //           },
+                            //           icon: const Icon(Icons.download, size: 16),
+                            //           label: const Text("Upgrade account"),
+                            //         ),
+                            //       ],
+                            //     ),
+                            //   ),
+                            // ),
+                          ],
                         ),
-                        
-                        // const SizedBox(height: 24),
-                        
-                        // Card(
-                        //   color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
-                        //   shape: RoundedRectangleBorder(
-                        //     side: BorderSide(
-                        //       color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                        //     ),
-                        //     borderRadius: BorderRadius.circular(12),
-                        //   ),
-                        //   child: Padding(
-                        //     padding: const EdgeInsets.all(16),
-                        //     child: Row(
-                        //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        //       children: [
-                        //         Column(
-                        //           crossAxisAlignment: CrossAxisAlignment.start,
-                        //           children: [
-                        //             Text(
-                        //               "Get Full Access",
-                        //               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        //                 fontWeight: FontWeight.bold,
-                        //               ),
-                        //             ),
-                        //             const SizedBox(height: 4),
-                        //             Text(
-                        //               "Unlock unlimited questions, detailed explanations, and more",
-                        //               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        //                 color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
-                        //               ),
-                        //             ),
-                        //           ],
-                        //         ),
-                        //         OutlinedButton.icon(
-                        //           onPressed: () {
-                        //             // Navigate to download page
-                        //           },
-                        //           icon: const Icon(Icons.download, size: 16),
-                        //           label: const Text("Upgrade account"),
-                        //         ),
-                        //       ],
-                        //     ),
-                        //   ),
-                        // ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        }
       ),
     );
   }
