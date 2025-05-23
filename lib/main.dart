@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:ivy_path/models/material_model.dart';
 import 'package:ivy_path/models/subject_model.dart';
 import 'package:ivy_path/providers/practice_subject.dart';
 import 'package:ivy_path/screens/forum/cat_instance_screen.dart';
@@ -18,6 +19,7 @@ void main() async {
   Hive.registerAdapter(SubjectAdapter());
   Hive.registerAdapter(SectionAdapter());
   Hive.registerAdapter(QuestionAdapter());
+  Hive.registerAdapter(MaterialAdapter());
 
   runApp(const MyApp());
 }

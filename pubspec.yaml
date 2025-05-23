@@ -55,6 +55,8 @@ dependencies:
   flutter_math_fork: ^0.7.3
   flutter_html_math: ^3.0.0-alpha.4
   flutter_markdown: ^0.7.7+1
+  encrypt: ^5.0.3
+  path_provider: ^2.1.5
 
 
 dev_dependencies:

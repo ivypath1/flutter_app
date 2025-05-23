@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:intl/intl.dart';
 import 'package:ivy_path/widgets/layout_widget.dart';
+import 'package:ivy_path/services/material_service.dart';
+import '/models/material_model.dart' as mm;
 
 double mediaSetup(double size, {double? sm, double? md, double? lg}) {
   if (size < 640) {
@@ -21,8 +23,9 @@ class MaterialsPage extends StatefulWidget {
 }
 
 class _MaterialsPageState extends State<MaterialsPage> {
-  List<Material> materials = [];
-  List<Material> filteredMaterials = [];
+  final MaterialService _materialService = MaterialService();
+  List<mm.Material> materials = [];
+  List<mm.Material> filteredMaterials = [];
   bool loading = true;
   String? error;
 
@@ -41,88 +44,39 @@ class _MaterialsPageState extends State<MaterialsPage> {
     try {
       setState(() {
         loading = true;
+        error = null;
       });
-      
-      // Simulate API delay
-      await Future.delayed(const Duration(seconds: 1));
-      
-      final data = _generateDemoData();
+
+      final data = await _materialService.getMaterials();
       setState(() {
         materials = data;
         filteredMaterials = data;
+        loading = false;
       });
     } catch (err) {
       setState(() {
-        error = "Failed to load materials";
-      });
-    } finally {
-      setState(() {
+        error = err.toString();
         loading = false;
       });
     }
   }
 
-  List<Material> _generateDemoData() {
-    return [
-      Material(
-        id: 1,
-        title: "Algebra Basics",
-        subject: 1,
-        isDemo: true,
-        uploadedDate: DateTime.now().subtract(const Duration(days: 2)),
-        fileSize: "2.4 MB",
-        file: "algebra.pdf",
-      ),
-      Material(
-        id: 2,
-        title: "Chemical Reactions",
-        subject: 3,
-        isDemo: false,
-        uploadedDate: DateTime.now().subtract(const Duration(days: 5)),
-        fileSize: "3.1 MB",
-        file: "chemistry.pdf",
-      ),
-      Material(
-        id: 3,
-        title: "World War II Timeline",
-        subject: 5,
-        isDemo: true,
-        uploadedDate: DateTime.now().subtract(const Duration(days: 1)),
-        fileSize: "1.8 MB",
-        file: "history.pdf",
-      ),
-      Material(
-        id: 4,
-        title: "Cell Biology Fundamentals",
-        subject: 4,
-        isDemo: true,
-        uploadedDate: DateTime.now().subtract(const Duration(days: 3)),
-        fileSize: "2.7 MB",
-        file: "biology.pdf",
-      ),
-      Material(
-        id: 5,
-        title: "Trigonometry Formulas",
-        subject: 1,
-        isDemo: false,
-        uploadedDate: DateTime.now().subtract(const Duration(days: 7)),
-        fileSize: "1.5 MB",
-        file: "trigonometry.pdf",
-      ),
-      Material(
-        id: 6,
-        title: "Grammar Rules",
-        subject: 8,
-        isDemo: true,
-        uploadedDate: DateTime.now().subtract(const Duration(days: 4)),
-        fileSize: "2.0 MB",
-        file: "english.pdf",
-      ),
-    ];
+  Future<void> _downloadMaterial(mm.Material material) async {
+    try {
+      final filePath = await _materialService.downloadMaterial(material);
+      // Handle successful download (e.g., open file)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Material downloaded successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to download material: ${e.toString()}')),
+      );
+    }
   }
 
   void _applyFilters() {
-    List<Material> result = [...materials];
+    List<mm.Material> result = [...materials];
     
     // Apply search filter
     if (searchQuery.isNotEmpty) {
@@ -403,6 +357,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
       children: filteredMaterials.map((material) {
         final subjectInfo = SUBJECTS[material.subject] ?? 
             SubjectInfo(name: 'Subject ${material.subject}', icon: Icons.article);
+            final isDownloaded = _materialService.isDownloaded(material.id);
         return StaggeredGridTile.fit(
           crossAxisCellCount: 1, 
           child: AnimatedContainer(
@@ -435,10 +390,21 @@ class _MaterialsPageState extends State<MaterialsPage> {
                             ),
                           ],
                         ),
-                        IconButton(
-                          onPressed: (){}, 
-                          icon: const Icon(Icons.download)
-                        )
+                        FutureBuilder(
+                          future: isDownloaded, 
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return IconButton(
+                                onPressed: () => {}, 
+                                icon: const Icon(Icons.download)
+                              );
+                            }
+                            return IconButton(
+                              onPressed: () => snapshot.data! ? {} : _downloadMaterial(material), 
+                              icon: snapshot.data! ? const Icon(Icons.download_done) : const Icon(Icons.download)
+                            );
+                          }
+                        ),
 
                       ],
                     ),
@@ -743,26 +709,6 @@ class _MaterialsPageState extends State<MaterialsPage> {
       ),
     );
   }
-}
-
-class Material {
-  final int id;
-  final String title;
-  final int subject;
-  final bool isDemo;
-  final DateTime uploadedDate;
-  final String fileSize;
-  final String file;
-
-  Material({
-    required this.id,
-    required this.title,
-    required this.subject,
-    required this.isDemo,
-    required this.uploadedDate,
-    required this.fileSize,
-    required this.file,
-  });
 }
 
 class SubjectInfo {
