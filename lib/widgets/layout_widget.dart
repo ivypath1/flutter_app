@@ -3,13 +3,15 @@ import 'package:provider/provider.dart';
 import 'package:ivy_path/providers/auth_provider.dart';
 
 class AppDrawer extends StatelessWidget {
-  const AppDrawer({super.key});
+  const AppDrawer({super.key, this.activeIndex=1});
+  final int activeIndex;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final auth = context.watch<AuthProvider>();
     final user = auth.authData?.user;
+    
     
     return Container(
       width: 280,
@@ -45,37 +47,43 @@ class AppDrawer extends StatelessWidget {
                 _DrawerItem(
                   icon: Icons.dashboard,
                   title: 'Dashboard',
-                  isSelected: true,
+                  isSelected: activeIndex == 1,
                   onTap: () {Navigator.pushNamed(context, '/dashboard');},
                 ),
                 _DrawerItem(
                   icon: Icons.question_answer,
                   title: 'Practice Questions',
+                  isSelected: activeIndex == 2,
                   onTap: () {Navigator.pushNamed(context, '/practice');},
                 ),
                 _DrawerItem(
                   icon: Icons.book,
                   title: 'Premium Materials',
+                  isSelected: activeIndex == 3,
                   onTap: () {Navigator.pushNamed(context, '/materials');},
                 ),
                 _DrawerItem(
                   icon: Icons.trending_up,
                   title: 'My Progress',
+                  isSelected: activeIndex == 4,
                   onTap: () {},
                 ),
                 _DrawerItem(
                   icon: Icons.book,
                   title: 'Discussion forum',
+                  isSelected: activeIndex == 5,
                   onTap: () {Navigator.pushNamed(context, '/forum');},
                 ),
                 _DrawerItem(
                   icon: Icons.notifications,
                   title: 'Notifications',
+                  isSelected: activeIndex == 6,
                   onTap: () {},
                 ),
                 _DrawerItem(
                   icon: Icons.person,
                   title: 'Profile',
+                  isSelected: activeIndex == 7,
                   onTap: () {},
                 ),
               ],

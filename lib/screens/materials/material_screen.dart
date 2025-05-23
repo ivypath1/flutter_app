@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:intl/intl.dart';
+import 'package:ivy_path/widgets/layout_widget.dart';
 
 double mediaSetup(double size, {double? sm, double? md, double? lg}) {
   if (size < 640) {
@@ -159,6 +161,8 @@ class _MaterialsPageState extends State<MaterialsPage> {
   @override
   Widget build(BuildContext context) {
     final mediaWidth = MediaQuery.of(context).size.width;
+    final isDesktop = mediaWidth >= 1100;
+    final isTablet = mediaWidth >= 600;
     
     if (loading) {
       return _buildLoadingSkeleton(mediaWidth);
@@ -169,46 +173,64 @@ class _MaterialsPageState extends State<MaterialsPage> {
     }
     
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Study Materials'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            const Text(
-              'Study Materials',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      drawer: !isDesktop ? const AppDrawer(activeIndex: 3) : null,
+      body: Row(
+        children: [
+          if (isDesktop) const AppDrawer(activeIndex: 3),
+          if (isTablet && !isDesktop)
+                const IvyNavRail(),
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
+                IvyAppBar(
+                  title: 'Study Materials',
+                  showMenuButton: !isDesktop,
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Study Materials',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Access demo study materials for your preparation',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Search and Filter Controls
+                        _buildSearchAndFilterControls(mediaWidth),
+                        const SizedBox(height: 16),
+                        
+                        // Demo Version Notice
+                        _buildDemoNoticeCard(),
+                        const SizedBox(height: 24),
+                        
+                        // Materials Grid
+                        if (filteredMaterials.isNotEmpty)
+                          _buildMaterialsGrid(mediaWidth)
+                        else
+                          _buildEmptyState(),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Premium and App Download Cards
+                        _buildPromoCards(mediaWidth),
+                      ],
+                    ),
+                  ),
+                ),
+                
+              ]
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Access demo study materials for your preparation',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
-            
-            // Search and Filter Controls
-            _buildSearchAndFilterControls(mediaWidth),
-            const SizedBox(height: 16),
-            
-            // Demo Version Notice
-            _buildDemoNoticeCard(),
-            const SizedBox(height: 24),
-            
-            // Materials Grid
-            if (filteredMaterials.isNotEmpty)
-              _buildMaterialsGrid(mediaWidth)
-            else
-              _buildEmptyState(),
-            
-            const SizedBox(height: 24),
-            
-            // Premium and App Download Cards
-            _buildPromoCards(mediaWidth),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -234,10 +256,12 @@ class _MaterialsPageState extends State<MaterialsPage> {
           },
         ),
         const SizedBox(height: 12),
-        Row(
+        StaggeredGrid.count(
+          crossAxisCount: mediaSetup(mediaWidth, sm: 1, md: 2).toInt(),
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
           children: [
-            Expanded(
-              child: DropdownButtonFormField(
+            DropdownButtonFormField(
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -263,10 +287,8 @@ class _MaterialsPageState extends State<MaterialsPage> {
                   });
                 },
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonFormField(
+
+              DropdownButtonFormField(
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -298,9 +320,20 @@ class _MaterialsPageState extends State<MaterialsPage> {
                   });
                 },
               ),
-            ),
-          ],
+
+          ]
         ),
+        // Row(
+        //   children: [
+        //     Expanded(
+        //       child: 
+        //     ),
+        //     const SizedBox(width: 12),
+        //     Expanded(
+        //       child: 
+        //     ),
+        //   ],
+        // ),
       ],
     );
   }
@@ -361,7 +394,92 @@ class _MaterialsPageState extends State<MaterialsPage> {
   }
 
   Widget _buildMaterialsGrid(double mediaWidth) {
-    final crossAxisCount = mediaSetup(mediaWidth, sm: 1, md: 2, lg: 2).toInt();
+    final crossAxisCount = mediaSetup(mediaWidth, sm: 1, md: 2, lg: 3).toInt();
+
+    return StaggeredGrid.count(
+      crossAxisCount: crossAxisCount,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      children: filteredMaterials.map((material) {
+        final subjectInfo = SUBJECTS[material.subject] ?? 
+            SubjectInfo(name: 'Subject ${material.subject}', icon: Icons.article);
+        return StaggeredGridTile.fit(
+          crossAxisCellCount: 1, 
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[100],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(subjectInfo.icon, color: Colors.blue),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              subjectInfo.name,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: (){}, 
+                          icon: const Icon(Icons.download)
+                        )
+
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      material.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Uploaded on ${DateFormat('MMM d, y').format(material.uploadedDate)}',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 5,),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Chip(
+                          label: Text(material.fileSize),
+                          backgroundColor: Colors.grey[200],
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Navigate to material detail
+                          },
+                          child: const Text('View Material'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+      
+    );
     
     return GridView.builder(
       shrinkWrap: true,
@@ -378,82 +496,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
         final subjectInfo = SUBJECTS[material.subject] ?? 
             SubjectInfo(name: 'Subject ${material.subject}', icon: Icons.article);
         
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          child: Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[100],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(subjectInfo.icon, color: Colors.blue),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            subjectInfo.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      Chip(
-                        label: Text(material.fileSize),
-                        backgroundColor: Colors.grey[200],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    material.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Uploaded on ${DateFormat('MMM d, y').format(material.uploadedDate)}',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  const Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.article, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            material.isDemo ? "Demo Material" : "Premium Material",
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          // Navigate to material detail
-                        },
-                        child: const Text('View Material'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
+        return ;
       },
     );
   }

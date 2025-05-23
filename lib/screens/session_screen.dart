@@ -1,11 +1,12 @@
+// lib/screens/session_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:async';
-
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:ivy_path/screens/result_screen.dart';
-
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:ivy_path/models/subject_model.dart';
 
 class SessionPage extends StatefulWidget {
   final String mode; // 'study', 'practice', or 'mock'
@@ -38,208 +39,24 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
   Duration _remainingTime = Duration.zero;
   late Timer _timer;
   bool _showCorrectAnswer = false;
+  bool _showFullQuestionSheet = false;
+
 
   // Time tracking variables
   final Map<String, Duration> _subjectTimeSpent = {};
   final Map<String, DateTime?> _subjectTimers = {};
   String? _currentActiveSubject;
 
-  final List<Map<String, dynamic>> _mockSubjects = [
-    {
-      "id": "mathematics",
-      "name": "Mathematics",
-      "questions": [
-      {
-        "id": 1,
-        "question": r"If x² + 4x + 4 = 0, what is the value of x? \n Find the differential coefficient of $ \frac{x2-5x+7}{2x} $ at the point (2, 1/4).",
-        "options": [
-          {"id": "A", "text": "-2"},
-          {"id": "B", "text": "2"},
-          {"id": "C", "text": "-4"},
-          {"id": "D", "text": "4"},
-        ],
-        "correctAnswer": "A",
-        "explanation": "This is a quadratic equation that can be factored as (x + 2)² = 0. Therefore, the solution is x = -2."
-      },
-      {
-        "id": 2,
-        "question": """Based on the temperature data below, what is the average (mean) temperature?
-        | Compounds | Molecular Mass | Nature  |\n|-----------|----------------|---------|\n| H₂S       | 32             | Gas     |\n| CO₂       | 44             | Gas     |\n| SO₂       | 64             | Gas     |\n| H₂O       | 18             | Liquid  |
-        """,
-        "options": [
-          {"id": "A", "text": "21.8°C"},
-          {"id": "B", "text": "22.0°C"},
-          {"id": "C", "text": "21.5°C"},
-          {"id": "D", "text": "21.0°C"},
-        ],
-        "correctAnswer": "A",
-        "explanation": "Mean = (22 + 24 + 21 + 19 + 23)/5 = 109/5 = 21.8°C"
-      },
-      {
-        "id": 3,
-        "question": r"Solve the system of equations:\n$$\\begin{cases} 3x + 2y = 11 \\\\ x - y = 1 \\end{cases}$$",
-        "options": [
-          {"id": "A", "text": "x = 3, y = 2"},
-          {"id": "B", "text": "x = 3, y = 1"},
-          {"id": "C", "text": "x = 2, y = 2.5"},
-          {"id": "D", "text": "x = 4, y = 3"},
-        ],
-        "correctAnswer": "B",
-        "explanation": r"""From the second equation: $x = y + 1$
-Substituting into the first: $3(y + 1) + 2y = 11$
-$3y + 3 + 2y = 11$
-$5y + 3 = 11$
-$5y = 8$
-$y = \\frac{8}{5} = 1.6$
-Therefore $x = y + 1 = 2.6$
-The closest answer is B."""
-      },
-    ]
-    },
-    {
-      "id": "english",
-      "name": "English",
-      "questions": [
-  {
-    "id": 1,
-    "question": "The common ratio of a geometric progression is 2. If the 5th term is greater than the 1st term by 45, find the 5th term.",
-    "options": [
-      {
-        "id": "A",
-        "text": "2"
-      },
-      {
-        "id": "B",
-        "text": "8"
-      },
-      {
-        "id": "C",
-        "text": "45"
-      },
-      {
-        "id": "D",
-        "text": "48"
-      }
-    ],
-    "correctAnswer": "",
-    "explanation": ""
-  },
-  {
-    "id": 2,
-    "question": r"$ 8x^{-2}=\frac{2}{25}\ .\int12\  $",
-    "options": [
-      {
-        "id": "A",
-        "text": "1/5"
-      },
-      {
-        "id": "B",
-        "text": "2/5"
-      },
-      {
-        "id": "C",
-        "text": "5"
-      },
-      {
-        "id": "D",
-        "text": "10"
-      }
-    ],
-    "correctAnswer": "",
-    "explanation": ""
-  },
-  {
-    "id": 3,
-    "question": r"Solve $sin^2x+2\\ sinx\\ +1=0\\ \\ $for 0$\u00b0 <x<360\u00b0$.",
-    "options": [
-      {
-        "id": "A",
-        "text": "90"
-      },
-      {
-        "id": "B",
-        "text": "180"
-      },
-      {
-        "id": "C",
-        "text": "210"
-      },
-      {
-        "id": "D",
-        "text": "270"
-      }
-    ],
-    "correctAnswer": "",
-    "explanation": ""
-  },
-  {
-    "id": 4,
-    "question": r"Solve the equation $ 8x^{-2}=\frac{2}{25}\ .\  $ and then calculate $\int_{0}^{\pi} \sin(x) dx = 2$",
-    "options": [
-      {
-        "id": "A",
-        "text": "8"
-      },
-      {
-        "id": "B",
-        "text": "10"
-      },
-      {
-        "id": "C",
-        "text": "16"
-      },
-      {
-        "id": "D",
-        "text": "20"
-      }
-    ],
-    "correctAnswer": "",
-    "explanation": ""
-  },
-  {
-    "id": 5,
-    "question": "Find the equation of the circle which has its center at (-2, 3) and passes through the point (4,5).",
-    "options": [
-      {
-        "id": "A",
-        "text": r"$x2+2x+y2 -3y-27=0$"
-      },
-      {
-        "id": "B",
-        "text": r"$x2+y2+4x-6y-27=0$"
-      }
-    ],
-    "correctAnswer": "",
-    "explanation": ""
-  }
-]
-
-    },
-    {
-      "id": "physics",
-      "name": "Physics",
-      "questions": [
-        {
-          "id": 1,
-          "question": "What is the SI unit of force?",
-          "options": [
-            {"id": "A", "text": "Newton"},
-            {"id": "B", "text": "Joule"},
-            {"id": "C", "text": "Watt"},
-            {"id": "D", "text": "Pascal"},
-          ],
-          "correctAnswer": "A",
-          "explanation": "Force is measured in newtons (N), named after Sir Isaac Newton."
-        },
-      ]
-    },
-  ];
+  // Hive data
+  List<Subject> _subjects = [];
+  Map<int, List<Question>> _questions = {};
 
   @override
   void initState() {
     super.initState();
+    _loadData();
     _tabController = TabController(
-      length: _mockSubjects.length,
+      length: widget.subjects.length,
       vsync: this,
       initialIndex: _currentSubjectIndex,
     );
@@ -252,14 +69,56 @@ The closest answer is B."""
     }
 
     // Initialize time tracking for all subjects
-  for (var subject in _mockSubjects) {
-    _subjectTimeSpent[subject["id"]] = Duration.zero;
-    _subjectTimers[subject["id"]] = null;
+    for (var subject in widget.subjects) {
+      _subjectTimeSpent[subject["id"].toString()] = Duration.zero;
+      _subjectTimers[subject["id"].toString()] = null;
+    }
+
+    // Start timer for first subject
+    _currentActiveSubject = widget.subjects[_currentSubjectIndex]["id"].toString();
+    _subjectTimers[_currentActiveSubject!] = DateTime.now();
   }
 
-  // Start timer for first subject
-  _currentActiveSubject = _mockSubjects[_currentSubjectIndex]["id"];
-  _subjectTimers[_currentActiveSubject!] = DateTime.now();
+  Future<void> _loadData() async {
+    final subjectsBox = await Hive.openBox<Subject>('subjects');
+    final questionsBox = await Hive.openBox<Question>('questions');
+
+    // Load subjects
+    _subjects = widget.subjects.map((subjectConfig) {
+      final subject = subjectsBox.get(subjectConfig['id']);
+      if (subject == null) {
+        throw Exception('Subject ${subjectConfig['id']} not found in Hive');
+      }
+      return subject;
+    }).toList();
+
+    // Load questions for each subject
+    for (var subject in _subjects) {
+      for (var section in subject.sections) {
+        final sectionQuestions = questionsBox.values
+            .where((q) => q.sectionId == section.id)
+            .toList();
+            
+        if (_questions[subject.id] == null) {
+          _questions[subject.id] = [];
+        }
+        _questions[subject.id]!.addAll(sectionQuestions);
+      }
+
+      // Shuffle questions if needed
+      if (widget.shuffleQuestions) {
+        _questions[subject.id]?.shuffle();
+      }
+
+      // Shuffle options if needed
+      if (widget.shuffleOptions) {
+        for (var question in _questions[subject.id] ?? []) {
+          question.options.shuffle();
+        }
+      }
+    }
+
+    setState(() {});
   }
 
   @override
@@ -354,7 +213,7 @@ The closest answer is B."""
   }
 
   void _handleSubjectChange(int index) {
-    final newSubjectId = _mockSubjects[index]["id"];
+    final newSubjectId = widget.subjects[index]["id"];
     
     // Pause timer for current subject
     if (_currentActiveSubject != null) {
@@ -382,20 +241,20 @@ The closest answer is B."""
       _pauseSubjectTimer(_currentActiveSubject!);
     }
 
-    final subjectResults = _mockSubjects.map((subject) {
+    final subjectResults = _subjects.map((subject) {
       // Calculate score percentage
-      final questions = subject["questions"] as List;
+      final questions = _questions[subject.id] ?? [];
       final correctAnswers = questions.fold(0, (count, question) {
-        final userAnswer = _answeredQuestions[subject["id"]]?[question["id"]];
-        return count + (userAnswer == question["correctAnswer"] ? 1 : 0);
+        final userAnswer = _answeredQuestions[subject.id]?[question.id];
+        return count + (userAnswer == question.answer ? 1 : 0);
       });
       final score = (correctAnswers / questions.length) * 100;
       
       // Get tracked time spent
-      final timeSpent = _subjectTimeSpent[subject["id"]] ?? Duration.zero;
+      final timeSpent = _subjectTimeSpent[subject.id.toString()] ?? Duration.zero;
       
       return SubjectResult(
-        subject: subject["name"],
+        subject: subject.name,
         score: score,
         timeSpent: timeSpent.inSeconds / 60, // convert to minutes
       );
@@ -431,16 +290,22 @@ The closest answer is B."""
     return "$hours:$minutes:$seconds";
   }
 
-  Map<String, dynamic> get _currentSubject => _mockSubjects[_currentSubjectIndex];
-  int get _totalQuestions => (_currentSubject["questions"] as List).length;
-  Map<String, dynamic> get _currentQuestionData => 
-      _currentSubject["questions"][_currentQuestion - 1];
+  Map<String, dynamic> get _currentSubject => widget.subjects[_currentSubjectIndex];
+  int get _totalQuestions => (_questions[_currentSubject["id"]] ?? []).length;
+  Question? get _currentQuestionData => 
+      _questions[_currentSubject["id"]]?[_currentQuestion - 1];
 
   Widget _buildQuestionNumberButton(int questionNumber) {
     final isAnswered = _answeredQuestions[_currentSubject["id"]]?[questionNumber] != null;
     final isCurrent = _currentQuestion == questionNumber;
-    final isCorrect = _answeredQuestions[_currentSubject["id"]]?[questionNumber] == 
-        _currentSubject["questions"][questionNumber - 1]["correctAnswer"];
+
+    final correctAnswer = _questions[_currentSubject["id"]]?.firstWhere(
+      (q) => q.id == questionNumber,
+      orElse: () => Question(id: -1, question: '', options: [], answer: '', solution: '', sectionId: -1),
+    ).answer;
+    final userAnswer = _answeredQuestions[_currentSubject["id"]]?[questionNumber];
+    final isCorrect = userAnswer == correctAnswer;
+
     
     Color? backgroundColor;
     Color borderColor = Theme.of(context).dividerColor;
@@ -521,9 +386,9 @@ The closest answer is B."""
                     indicatorColor: Theme.of(context).colorScheme.primary,
                     labelColor: Theme.of(context).colorScheme.primary,
                     unselectedLabelColor: Theme.of(context).textTheme.bodySmall?.color,
-                    tabs: _mockSubjects.map((subject) {
+                    tabs: _subjects.map((subject) {
                       return Tab(
-                        text: subject["name"],
+                        text: subject.name,
                       );
                     }).toList(),
                   ),
@@ -563,7 +428,7 @@ The closest answer is B."""
                       if (isMobile) ...[
                         const SizedBox(height: 8),
                         Text(
-                          _currentSubject["name"],
+                          _currentSubject["name"] ?? '',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -592,16 +457,16 @@ The closest answer is B."""
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              MathContentWidget(content: _currentQuestionData["question"]),
+                              MathContentWidget(content: _currentQuestionData!.question),
                               // Text(
                               //   _currentQuestionData["question"],
                               //   style: const TextStyle(fontSize: 18),
                               // ),
                               const SizedBox(height: 16),
                               Column(
-                                children: (_currentQuestionData["options"] as List).map<Widget>((option) {
+                                children: (_currentQuestionData?.options as List).map<Widget>((option) {
                                   final isSelected = _selectedAnswer == option["id"];
-                                  final isCorrect = option["id"] == _currentQuestionData["correctAnswer"];
+                                  final isCorrect = option["id"] == _currentQuestionData?.answer;
                                   final showAsCorrect = (_showCorrectAnswer || (widget.mode == 'study' && isSelected)) && isCorrect;
                                   final showAsIncorrect = (_showCorrectAnswer || widget.mode == 'study') && isSelected && !isCorrect;
                                   final isDisabled = (widget.mode == 'study' && _selectedAnswer != null) || 
@@ -705,7 +570,7 @@ The closest answer is B."""
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  _currentQuestionData["explanation"],
+                                  _currentQuestionData!.solution,
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                                   ),
@@ -746,9 +611,26 @@ The closest answer is B."""
                               ),
                             ],
                           ),
+                          
                         ],
                       ),
                       if (isMobile) const SizedBox(height: 72),
+                      // Mobile question navigation (bottom sheet)
+                      if (isMobile) ...[
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: List.generate(_totalQuestions, (index) {
+                                return _buildQuestionNumberButton(index + 1);
+                              }),
+                            ),
+                          ),
+                        )
+                      ]
                     ],
                   ),
                 ),
@@ -774,7 +656,7 @@ The closest answer is B."""
                               ),
                               const SizedBox(height: 12),
                               Column(
-                                children: _mockSubjects.asMap().entries.map((entry) {
+                                children: _subjects.asMap().entries.map((entry) {
                                   final index = entry.key;
                                   final subject = entry.value;
                                   return Padding(
@@ -797,7 +679,7 @@ The closest answer is B."""
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
-                                              subject["name"],
+                                              subject.name,
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
@@ -842,32 +724,6 @@ The closest answer is B."""
               ],
             ],
           ),
-          // Mobile question navigation (bottom sheet)
-          if (isMobile) ...[
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  border: Border(
-                    top: BorderSide(
-                      color: Theme.of(context).dividerColor,
-                    ),
-                  ),
-                ),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: List.generate(_totalQuestions, (index) {
-                    return _buildQuestionNumberButton(index + 1);
-                  }),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

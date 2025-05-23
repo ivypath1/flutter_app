@@ -159,7 +159,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
     final isTablet = size >= 600;
 
     return Scaffold(
-      drawer: !isDesktop ? const AppDrawer() : null,
+      drawer: !isDesktop ? const AppDrawer(activeIndex: 2,) : null,
       // appBar: AppBar(
       //   leading: IconButton(
       //     icon: const Icon(Icons.arrow_back),
@@ -192,7 +192,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
           return Row(
             children: [
-              if (isDesktop) const AppDrawer(),
+              if (isDesktop) const AppDrawer(activeIndex: 2),
               if (isTablet && !isDesktop)
                 const IvyNavRail(),
               
