@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:ivy_path/firebase_options.dart';
 import 'package:ivy_path/models/material_model.dart';
 import 'package:ivy_path/models/subject_model.dart';
 import 'package:ivy_path/providers/practice_subject.dart';
@@ -15,6 +17,12 @@ import 'package:ivy_path/screens/dashboard_screen.dart';
 import 'package:ivy_path/theme/app_theme.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
   await Hive.initFlutter();
   Hive.registerAdapter(SubjectAdapter());
   Hive.registerAdapter(SectionAdapter());
@@ -44,8 +52,11 @@ class MyApp extends StatelessWidget {
         darkTheme: AppTheme.darkTheme,
         home: Consumer<AuthProvider>(
           builder: (context, auth, _) {
-            return  auth.isInitialized ? auth.isAuthenticated ? const DashboardScreen() : const LoginScreen() : 
-            const CircularProgressIndicator();
+            return auth.isInitialized 
+              ? auth.isAuthenticated 
+                ? const DashboardScreen() 
+                : const LoginScreen()
+              : const CircularProgressIndicator();
           },
         ),
         onGenerateRoute: (settings) {
@@ -58,7 +69,6 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          // Static routes fallback
           switch (settings.name) {
             case '/dashboard':
               return MaterialPageRoute(builder: (context) => const DashboardScreen());
