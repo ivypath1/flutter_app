@@ -192,7 +192,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
           return Row(
             children: [
-              if (isDesktop) const AppDrawer(activeIndex: 2),
+              if (isDesktop) const AppDrawer(activeIndex: 5),
               if (isTablet && !isDesktop)
                 const IvyNavRail(),
               

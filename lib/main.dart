@@ -7,6 +7,7 @@ import 'package:ivy_path/models/subject_model.dart';
 import 'package:ivy_path/providers/practice_subject.dart';
 import 'package:ivy_path/screens/forum/cat_instance_screen.dart';
 import 'package:ivy_path/screens/forum/forum_cats_screen.dart';
+import 'package:ivy_path/screens/forum/forum_topic_page.dart';
 import 'package:ivy_path/screens/materials/material_screen.dart';
 import 'package:ivy_path/screens/practice_config_screen.dart';
 import 'package:ivy_path/services/subject_service.dart';
@@ -65,7 +66,14 @@ class MyApp extends StatelessWidget {
           if (uri.pathSegments.length == 2 && uri.pathSegments.first == 'forum') {
             final id = uri.pathSegments[1];
             return MaterialPageRoute(
-              builder: (context) => CategoryPage(categoryId: id),
+              builder: (context) => ForumCategoryPage(categoryId: id),
+            );
+          }
+
+          if (uri.pathSegments.length == 2 && uri.pathSegments.first == 'topic') {
+            final id = uri.pathSegments[1];
+            return MaterialPageRoute(
+              builder: (context) => ForumTopicPage(topicId: id),
             );
           }
 

@@ -1,100 +1,129 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:ivy_path/providers/auth_provider.dart';
+import 'package:ivy_path/screens/forum/add_topic_screen.dart';
+import 'package:ivy_path/utitlity/responsiveness.dart';
+import 'package:ivy_path/services/forum_service.dart';
+import 'package:provider/provider.dart';
+import 'dart:async'; // Add this for StreamSubscription
 
-
-double mediaSetup(double size, {double? sm, double? md, double? lg}) {
-  if (size < 640) {
-    return sm ?? md ?? lg ?? 1;
-  } else if (size < 1024) {
-    return md ?? lg ?? sm ?? 1;
-  } else {
-    return lg ?? md ?? sm ?? 1;
-  }
-}
-
-class CategoryPage extends StatefulWidget {
+class ForumCategoryPage extends StatefulWidget {
   final String categoryId;
 
-  const CategoryPage({super.key, required this.categoryId});
+  const ForumCategoryPage({super.key, required this.categoryId});
 
   @override
-  State<CategoryPage> createState() => _CategoryPageState();
+  State<ForumCategoryPage> createState() => _ForumCategoryPageState();
 }
 
-class _CategoryPageState extends State<CategoryPage> {
+class _ForumCategoryPageState extends State<ForumCategoryPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<Topic> topics = [];
-  Category? category;
-  bool loading = true;
-  String error = '';
+  late ForumService _forumService;
+  
+  ForumCategory? _category;
+  List<ForumTopic> _topics = [];
+  bool _loading = true;
+  String? _errorMessage;
+  StreamSubscription? _categorySubscription;
+  StreamSubscription? _topicsSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    final auth = context.read<AuthProvider>();
+    final user = auth.authData?.user;
+    if (user == null) {
+      setState(() {
+        _errorMessage = 'User not authenticated';
+        _loading = false;
+      });
+      return;
+    }
+    
+    _forumService = ForumService(auth: auth, user: user);
+    _setupRealtimeListeners();
+    _loadInitialData(); // Load initial data while setting up listeners
   }
 
-  Future<void> _loadData() async {
-    // Simulate API delay
-    await Future.delayed(const Duration(seconds: 1));
-
+  Future<void> _loadInitialData() async {
     try {
-      // Mock category data
-      final mockCategories = {
-        '1': Category(id: '1', name: 'Mathematics', description: 'Discuss algebra, calculus, and other math topics'),
-        '2': Category(id: '2', name: 'Science', description: 'Physics, chemistry, biology discussions'),
-      };
-
-      // Mock topics data
-      final mockTopics = [
-        Topic(
-          id: '1',
-          title: 'Help with quadratic equations',
-          author: User(name: 'Alex Johnson', image: ''),
-          categoryId: '1',
-          replies: 8,
-          viewCount: 124,
-          isPinned: true,
-          tags: ['algebra', 'math'],
-          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-          updatedAt: DateTime.now().subtract(const Duration(minutes: 30)),
-        ),
-        Topic(
-          id: '2',
-          title: 'Calculus for beginners',
-          author: User(name: 'Maria Garcia', image: ''),
-          categoryId: '1',
-          replies: 5,
-          viewCount: 98,
-          isPinned: false,
-          tags: ['calculus'],
-          createdAt: DateTime.now().subtract(const Duration(days: 1)),
-          updatedAt: DateTime.now().subtract(const Duration(hours: 5)),
-        ),
-      ];
-
-      setState(() {
-        category = mockCategories[widget.categoryId];
-        topics = mockTopics.where((t) => t.categoryId == widget.categoryId).toList();
-        loading = false;
-      });
+      final category = await _forumService.getCategory(widget.categoryId);
+      final topics = await _forumService.getTopicsByCategory(widget.categoryId);
+      
+      if (mounted) {
+        setState(() {
+          _category = category;
+          _topics = topics;
+          _loading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        error = 'Failed to load data';
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to load initial data: $e';
+          _loading = false;
+        });
+      }
     }
   }
 
-  List<Topic> get filteredTopics {
-    if (_searchController.text.isEmpty) return topics;
-    return topics.where((topic) =>
+  void _setupRealtimeListeners() {
+    // Category listener
+    _categorySubscription = _forumService.getCategoryStream(widget.categoryId).listen(
+      (category) {
+        if (mounted) {
+          setState(() {
+            _category = category;
+          });
+        }
+      },
+      onError: (e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Failed to load category updates: $e';
+          });
+        }
+      },
+    );
+
+    // Topics listener
+    _topicsSubscription = _forumService.getTopicsByCategoryStream(widget.categoryId).listen(
+      (topics) {
+        if (mounted) {
+          setState(() {
+            _topics = topics;
+            if (_loading) _loading = false; // Only set loading to false if it was true
+          });
+        }
+      },
+      onError: (e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Failed to load topic updates: $e';
+            if (_loading) _loading = false;
+          });
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _categorySubscription?.cancel();
+    _topicsSubscription?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<ForumTopic> get filteredTopics {
+    if (_searchController.text.isEmpty) return _topics;
+    return _topics.where((topic) =>
       topic.title.toLowerCase().contains(_searchController.text.toLowerCase()) ||
       topic.tags.any((tag) => tag.toLowerCase().contains(_searchController.text.toLowerCase()))
     ).toList();
   }
 
-  String formatLastActivity(DateTime? date) {
+  String _formatLastActivity(DateTime? date) {
     if (date == null) return 'just now';
     return '${DateFormat('MMM d').format(date)} at ${DateFormat('h:mm a').format(date)}';
   }
@@ -103,7 +132,7 @@ class _CategoryPageState extends State<CategoryPage> {
   Widget build(BuildContext context) {
     final mediaWidth = MediaQuery.of(context).size.width;
     
-    if (loading) {
+    if (_loading && _category == null && _topics.isEmpty) {
       return Scaffold(
         body: Center(
           child: CircularProgressIndicator(
@@ -113,13 +142,13 @@ class _CategoryPageState extends State<CategoryPage> {
       );
     }
 
-    if (error.isNotEmpty) {
+    if (_errorMessage != null) {
       return Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(error, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              Text(_errorMessage!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: () => Navigator.pop(context),
@@ -132,7 +161,7 @@ class _CategoryPageState extends State<CategoryPage> {
       );
     }
 
-    if (category == null) {
+    if (_category == null) {
       return const Scaffold(body: Center(child: Text('Category not found')));
     }
 
@@ -142,7 +171,14 @@ class _CategoryPageState extends State<CategoryPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(category!.name),
+        title: Text(_category!.name),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Navigate to new topic page
+          Navigator.push(context, MaterialPageRoute(builder: (context) => NewTopicPage(categoryId: _category!.id)));
+        },
+        child: const Icon(Icons.add),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(mediaSetup(mediaWidth, sm: 12, md: 16, lg: 24)),
@@ -160,7 +196,7 @@ class _CategoryPageState extends State<CategoryPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        category!.name,
+                        _category!.name,
                         style: TextStyle(
                           fontSize: mediaSetup(mediaWidth, sm: 20, md: 24, lg: 28),
                           fontWeight: FontWeight.bold,
@@ -168,20 +204,21 @@ class _CategoryPageState extends State<CategoryPage> {
                       ),
                       SizedBox(height: mediaSetup(mediaWidth, sm: 2, md: 4, lg: 8)),
                       Text(
-                        category!.description,
+                        _category!.description,
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(width: mediaSetup(mediaWidth, sm: 8, md: 16, lg: 24)),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // Start new topic
-                  },
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('New Topic'),
-                ),
+                // SizedBox(width: mediaSetup(mediaWidth, sm: 8, md: 16, lg: 24)),
+                // ElevatedButton.icon(
+                //   onPressed: () {
+                //     // Start new topic
+                //     Navigator.push(context, MaterialPageRoute(builder: (context) => NewTopicPage(categoryId: _category!.id)));
+                //   },
+                //   icon: const Icon(Icons.add, size: 16),
+                //   label: const Text('New Topic'),
+                // ),
               ],
             ),
             SizedBox(height: mediaSetup(mediaWidth, sm: 16, md: 24, lg: 32)),
@@ -250,7 +287,7 @@ class _CategoryPageState extends State<CategoryPage> {
     );
   }
 
-  Widget _buildTopicCard(Topic topic, double mediaWidth) {
+  Widget _buildTopicCard(ForumTopic topic, double mediaWidth) {
     return Card(
       elevation: 2,
       child: InkWell(
@@ -258,6 +295,7 @@ class _CategoryPageState extends State<CategoryPage> {
           mediaSetup(mediaWidth, sm: 8, md: 12, lg: 16)),
         onTap: () {
           // Navigate to topic
+          Navigator.pushNamed(context, 'topic/${topic.id}');
         },
         child: Padding(
           padding: EdgeInsets.all(mediaSetup(mediaWidth, sm: 12, md: 16, lg: 20)),
@@ -269,7 +307,12 @@ class _CategoryPageState extends State<CategoryPage> {
                 children: [
                   CircleAvatar(
                     radius: mediaSetup(mediaWidth, sm: 16, md: 20, lg: 24),
-                    child: Text(topic.author.name[0]),
+                    backgroundImage: topic.author.image != null 
+                        ? NetworkImage(topic.author.image!) 
+                        : null,
+                    child: topic.author.image == null 
+                        ? Text(topic.author.name[0])
+                        : null,
                   ),
                   SizedBox(width: mediaSetup(mediaWidth, sm: 8, md: 12, lg: 16)),
                   Expanded(
@@ -343,7 +386,7 @@ class _CategoryPageState extends State<CategoryPage> {
                   Icon(Icons.visibility, size: mediaSetup(mediaWidth, sm: 12, md: 14, lg: 16)),
                   SizedBox(width: mediaSetup(mediaWidth, sm: 4, md: 6, lg: 8)),
                   Text(
-                    '${topic.viewCount} views',
+                    '${topic.viewCount ?? 0} views',
                     style: TextStyle(
                       fontSize: mediaSetup(mediaWidth, sm: 10, md: 12, lg: 14),
                       color: Colors.grey[600],
@@ -353,7 +396,7 @@ class _CategoryPageState extends State<CategoryPage> {
                   Icon(Icons.access_time, size: mediaSetup(mediaWidth, sm: 12, md: 14, lg: 16)),
                   SizedBox(width: mediaSetup(mediaWidth, sm: 4, md: 6, lg: 8)),
                   Text(
-                    formatLastActivity(topic.updatedAt),
+                    _formatLastActivity(topic.updatedAt),
                     style: TextStyle(
                       fontSize: mediaSetup(mediaWidth, sm: 10, md: 12, lg: 14),
                       color: Colors.grey[600],
@@ -367,50 +410,4 @@ class _CategoryPageState extends State<CategoryPage> {
       ),
     );
   }
-}
-
-// Data models
-class Category {
-  final String id;
-  final String name;
-  final String description;
-
-  Category({
-    required this.id,
-    required this.name,
-    required this.description,
-  });
-}
-
-class Topic {
-  final String id;
-  final String title;
-  final User author;
-  final String categoryId;
-  final int replies;
-  final int viewCount;
-  final bool isPinned;
-  final List<String> tags;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
-  Topic({
-    required this.id,
-    required this.title,
-    required this.author,
-    required this.categoryId,
-    required this.replies,
-    required this.viewCount,
-    required this.isPinned,
-    required this.tags,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-}
-
-class User {
-  final String name;
-  final String image;
-
-  User({required this.name, required this.image});
 }

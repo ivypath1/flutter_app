@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "871115568480",
+    "firebase_url": "https://ivypath-default-rtdb.firebaseio.com",
+    "project_id": "ivypath",
+    "storage_bucket": "ivypath.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:871115568480:android:c273998bd16af0b6601a05",
+        "android_client_info": {
+          "package_name": "com.example.ivy_path"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7VSfcFjIIITZiM5GUbU0HAXt5KTnCciI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
