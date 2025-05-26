@@ -11,6 +11,7 @@ import 'package:ivy_path/screens/forum/forum_cats_screen.dart';
 import 'package:ivy_path/screens/forum/forum_topic_page.dart';
 import 'package:ivy_path/screens/materials/material_screen.dart';
 import 'package:ivy_path/screens/notifications/notification_Screen.dart';
+import 'package:ivy_path/screens/performance_screen.dart';
 import 'package:ivy_path/screens/practice_config_screen.dart';
 import 'package:ivy_path/screens/profile_screen.dart';
 import 'package:ivy_path/services/subject_service.dart';
@@ -96,6 +97,8 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(builder: (context) => const ProfilePage());
             case '/notifications':
               return MaterialPageRoute(builder: (context) => const NotificationsPage());
+            case '/performance':
+              return MaterialPageRoute(builder: (context) => const PerformancePage());
 
               
           }

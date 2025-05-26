@@ -20,13 +20,17 @@ class PracticeRecord {
   @HiveField(4)
   final List<Result> results;
 
+  @HiveField(5)
+  final DateTime timestamp;
+
   PracticeRecord({
     required this.id,
     required this.duration,
     required this.mode,
     this.isDraft = true,
     required this.results,
-  });
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
 
   factory PracticeRecord.fromJson(Map<String, dynamic> json){
       return PracticeRecord(

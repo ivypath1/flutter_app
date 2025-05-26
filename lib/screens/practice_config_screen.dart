@@ -192,10 +192,9 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
           return Row(
             children: [
-              if (isDesktop) const AppDrawer(activeIndex: 5),
-              if (isTablet && !isDesktop)
-                const IvyNavRail(),
-              
+              if (isDesktop) const AppDrawer(activeIndex: 2),
+              if (isTablet && !isDesktop) const IvyNavRail(),
+
               Expanded(
                 child: CustomScrollView(
                   slivers: [

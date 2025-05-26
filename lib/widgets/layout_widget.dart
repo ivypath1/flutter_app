@@ -66,7 +66,7 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.trending_up,
                   title: 'My Progress',
                   isSelected: activeIndex == 4,
-                  onTap: () {},
+                  onTap: () {Navigator.pushNamed(context, '/performance');},
                 ),
                 _DrawerItem(
                   icon: Icons.book,

@@ -22,13 +22,14 @@ class PracticeRecordAdapter extends TypeAdapter<PracticeRecord> {
       mode: fields[2] as String,
       isDraft: fields[3] as bool,
       results: (fields[4] as List).cast<Result>(),
+      timestamp: fields[5] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PracticeRecord obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class PracticeRecordAdapter extends TypeAdapter<PracticeRecord> {
       ..writeByte(3)
       ..write(obj.isDraft)
       ..writeByte(4)
-      ..write(obj.results);
+      ..write(obj.results)
+      ..writeByte(5)
+      ..write(obj.timestamp);
   }
 
   @override
