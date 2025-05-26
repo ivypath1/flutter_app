@@ -59,6 +59,7 @@ dependencies:
   path_provider: ^2.1.5
   firebase_core: ^2.27.1
   firebase_database: ^10.4.10
+  timeago: ^3.7.1
 
 
 dev_dependencies:

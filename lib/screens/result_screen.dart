@@ -24,6 +24,7 @@ class _ResultPageState extends State<ResultPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final mediaWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       appBar: AppBar(
@@ -50,7 +51,7 @@ class _ResultPageState extends State<ResultPage> {
                 if (!widget.isPracticeMode) _buildUserInfoSection(theme),
                 const SizedBox(height: 24),
                 widget.isPracticeMode
-                    ? _buildPracticeModeContent(theme)
+                    ? _buildPracticeModeContent(theme, mediaWidth)
                     : _buildMockUTMEModeContent(theme),
                 const SizedBox(height: 24),
                 // _buildWatermarkSection(),
@@ -94,7 +95,7 @@ class _ResultPageState extends State<ResultPage> {
     );
   }
 
-  Widget _buildPracticeModeContent(ThemeData theme) {
+  Widget _buildPracticeModeContent(ThemeData theme, mediaWidth) {
     final totalScore = widget.subjectResults.fold(0, (sum, item) => (sum + item.score).toInt()) / widget.subjectResults.length;
     final totalTime = widget.subjectResults.fold(0, (sum, item) => (sum + item.timeSpent).toInt());
 
@@ -107,8 +108,13 @@ class _ResultPageState extends State<ResultPage> {
               children: [
                 Text('Performance Summary', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 16),
-                Row(
+                mediaWidth > 640 ? Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildSummaryChip('Total Score', '${totalScore.toStringAsFixed(1)}%'),
+                    _buildSummaryChip('Total Time', '${totalTime.toStringAsFixed(1)} mins'),
+                  ],
+                ) : Wrap(
                   children: [
                     _buildSummaryChip('Total Score', '${totalScore.toStringAsFixed(1)}%'),
                     _buildSummaryChip('Total Time', '${totalTime.toStringAsFixed(1)} mins'),

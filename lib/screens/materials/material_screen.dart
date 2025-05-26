@@ -447,24 +447,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
       
     );
     
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.5,
-      ),
-      itemCount: filteredMaterials.length,
-      itemBuilder: (context, index) {
-        final material = filteredMaterials[index];
-        final subjectInfo = SUBJECTS[material.subject] ?? 
-            SubjectInfo(name: 'Subject ${material.subject}', icon: Icons.article);
-        
-        return ;
-      },
-    );
+  
   }
 
   Widget _buildEmptyState() {

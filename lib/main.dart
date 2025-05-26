@@ -3,13 +3,16 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:ivy_path/firebase_options.dart';
 import 'package:ivy_path/models/material_model.dart';
+import 'package:ivy_path/models/result_model.dart';
 import 'package:ivy_path/models/subject_model.dart';
 import 'package:ivy_path/providers/practice_subject.dart';
 import 'package:ivy_path/screens/forum/cat_instance_screen.dart';
 import 'package:ivy_path/screens/forum/forum_cats_screen.dart';
 import 'package:ivy_path/screens/forum/forum_topic_page.dart';
 import 'package:ivy_path/screens/materials/material_screen.dart';
+import 'package:ivy_path/screens/notifications/notification_Screen.dart';
 import 'package:ivy_path/screens/practice_config_screen.dart';
+import 'package:ivy_path/screens/profile_screen.dart';
 import 'package:ivy_path/services/subject_service.dart';
 import 'package:provider/provider.dart';
 import 'package:ivy_path/providers/auth_provider.dart';
@@ -29,6 +32,9 @@ void main() async {
   Hive.registerAdapter(SectionAdapter());
   Hive.registerAdapter(QuestionAdapter());
   Hive.registerAdapter(MaterialAdapter());
+  Hive.registerAdapter(PracticeRecordAdapter());
+  Hive.registerAdapter(ResultAdapter());
+
 
   runApp(const MyApp());
 }
@@ -86,6 +92,12 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(builder: (context) => const MaterialsPage());
             case '/forum':
               return MaterialPageRoute(builder: (context) => const ForumPage());
+            case '/profile':
+              return MaterialPageRoute(builder: (context) => const ProfilePage());
+            case '/notifications':
+              return MaterialPageRoute(builder: (context) => const NotificationsPage());
+
+              
           }
 
           return null;

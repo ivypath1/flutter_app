@@ -120,14 +120,14 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
     // For mock mode
     else {
+      print(_subjects);
       return {
         "mode": "mock",
-        "subjects": _subjects.map((subjectId) {
-          final subject = _mockSubjects.firstWhere((s) => s["id"] == subjectId);
+        "subjects": _subjects.map((subject) {
           return {
-            "id": subjectId,
-            "questions": subject["questions"],
-            "section": "all", // Mock exams typically use all sections
+            "id": subject["id"],
+            "questions": 40,
+            "section": 0, // Mock exams typically use all sections
           };
         }).toList(),
         "duration": 45.0, // Mock exams typically have fixed duration
