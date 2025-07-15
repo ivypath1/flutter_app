@@ -65,7 +65,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
       return {
         "id": subject.id,
         "name": subject.name,
-        "questions": 40, // Default mock exam question count
+        "questions": 10, // Default mock exam question count
         "section": subject.sections
       };
     }).toList();
@@ -73,13 +73,9 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
   final List<Map<String, dynamic>> _selectTypes = [
     {"value": "all", "label": "All"},
-    {"value": "section1", "label": "Section 1"},
-    {"value": "section2", "label": "Section 2"},
-    {"value": "section3", "label": "Section 3"},
   ];
 
   void _handleSubjectToggle(int subjectId) {
-    print(subjectId);
     setState(() {
       if (_selectedSubjects.contains(subjectId)) {
         _selectedSubjects.remove(subjectId);
@@ -88,7 +84,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
       } else {
         if (_selectedSubjects.length < 4) {
           _selectedSubjects.add(subjectId);
-          _subjectSettings.add({"id": subjectId, "section": 0, "questions": 5});
+          _subjectSettings.add({"id": subjectId, "section": 0, "questions": 10});
         }
       }
     });
@@ -120,19 +116,19 @@ class _QuestionsPageState extends State<QuestionsPage> {
     }
     // For mock mode
     else {
-      print(_subjects);
+      // print(_subjects);
       return {
         "mode": "mock",
         "subjects": _subjects.map((subject) {
           return {
             "id": subject["id"],
-            "questions": 40,
+            "questions": 10,
             "section": 0, // Mock exams typically use all sections
           };
         }).toList(),
         "duration": 45.0, // Mock exams typically have fixed duration
-        "shuffleQuestions": _shuffleQuestions,
-        "shuffleOptions": _shuffleOptions,
+        "shuffleQuestions": true,
+        "shuffleOptions": true,
       };
     }
   }
@@ -230,7 +226,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            "Demo Version",
+                                            "Premium Version",
                                             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -241,27 +237,13 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                 color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                                               ),
-                                              children: [
-                                                const TextSpan(text: "You're using the demo version with limited features. "),
-                                                TextSpan(
-                                                  text: "Subscribe to Premium",
-                                                  style: TextStyle(
-                                                    color: Theme.of(context).colorScheme.primary,
-                                                    decoration: TextDecoration.underline,
-                                                  ),
-                                                ),
-                                                const TextSpan(text: " or "),
-                                                TextSpan(
-                                                  text: "download our app",
-                                                  style: TextStyle(
-                                                    color: Theme.of(context).colorScheme.primary,
-                                                    decoration: TextDecoration.underline,
-                                                  ),
-                                                ),
-                                                const TextSpan(text: " for full access."),
+                                              children: const [
+                                                TextSpan(text: "You're using the premium version. "),
+                                                TextSpan(text: "Practice unlimited questions with full access to explanations, timed modes, and performance tracking."),
                                               ],
                                             ),
                                           ),
+
                                         ],
                                       ),
                                     ),
@@ -336,7 +318,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                     if (selectedMode.isNotEmpty) ...[
                                       const SizedBox(height: 16),
                                       Card(
-                                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
                                         child: Padding(
                                           padding: const EdgeInsets.all(12),
                                           child: Row(
@@ -407,11 +389,11 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                       style: Theme.of(context).textTheme.bodyMedium,
                                                     ),
                                                     const SizedBox(width: 8),
-                                                    const Chip(
-                                                      label: Text("Premium"),
-                                                      side: BorderSide.none,
-                                                      visualDensity: VisualDensity.compact,
-                                                    ),
+                                                    // const Chip(
+                                                    //   label: Text("Premium"),
+                                                    //   side: BorderSide.none,
+                                                    //   visualDensity: VisualDensity.compact,
+                                                    // ),
                                                   ],
                                                 ),
                                                 Row(
@@ -431,11 +413,11 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                       style: Theme.of(context).textTheme.bodyMedium,
                                                     ),
                                                     const SizedBox(width: 8),
-                                                    const Chip(
-                                                      label: Text("Premium"),
-                                                      side: BorderSide.none,
-                                                      visualDensity: VisualDensity.compact,
-                                                    ),
+                                                    // const Chip(
+                                                    //   label: Text("Premium"),
+                                                    //   side: BorderSide.none,
+                                                    //   visualDensity: VisualDensity.compact,
+                                                    // ),
                                                   ],
                                                 ),
                                               ],
@@ -490,7 +472,8 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                     onTap: isDisabled ? null : () => _handleSubjectToggle(subject["id"]),
                                                     borderRadius: BorderRadius.circular(12),
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(12),
+                                                      padding: const EdgeInsets.symmetric
+                                                      (horizontal: 12, vertical: 15),
                                                       child: Column(
                                                         crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: [
@@ -530,11 +513,11 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                                   ),
                                                                 ],
                                                               ),
-                                                              const Chip(
-                                                                label: Text("Demo"),
-                                                                side: BorderSide.none,
-                                                                visualDensity: VisualDensity.compact,
-                                                              ),
+                                                              // const Chip(
+                                                              //   label: Text("Demo"),
+                                                              //   side: BorderSide.none,
+                                                              //   visualDensity: VisualDensity.compact,
+                                                              // ),
                                                             ],
                                                           ),
                                                           
@@ -544,20 +527,20 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                               crossAxisAlignment: CrossAxisAlignment.start,
                                                               children: [
                                                                 Text(
-                                                                  "Questions (Max 5)",
+                                                                  "Questions (Max 50)",
                                                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                                     color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                                                                   ),
                                                                 ),
                                                                 const SizedBox(height: 4),
                                                                 TextFormField(
-                                                                  initialValue: _subjectSettings[_subjectSettings.indexWhere((item) => item['id'] == subject["id"])]["questions"]?.toString() ?? "5",
+                                                                  initialValue: _subjectSettings[_subjectSettings.indexWhere((item) => item['id'] == subject["id"])]["questions"]?.toString() ?? "10",
                                                                   onChanged: (value) {
-                                                                    final num = int.tryParse(value) ?? 5;
+                                                                    final num = int.tryParse(value) ?? 10;
                                                                     _updateSubjectSettings(
                                                                       subject["id"],
                                                                       "questions",
-                                                                      num.clamp(1, 5),
+                                                                      num.clamp(1, 50),
                                                                     );
                                                                   },
                                                                   keyboardType: TextInputType.number,
@@ -594,11 +577,11 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                                           children: [
                                                                             Text(section.name),
-                                                                            const Chip(
-                                                                              label: Text("Premium"),
-                                                                              side: BorderSide.none,
-                                                                              visualDensity: VisualDensity.compact,
-                                                                            ),
+                                                                            // const Chip(
+                                                                            //   label: Text("Premium"),
+                                                                            //   side: BorderSide.none,
+                                                                            //   visualDensity: VisualDensity.compact,
+                                                                            // ),
                                                                           ],
                                                                         ),
                                                                       );
@@ -633,7 +616,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                       
                                       const SizedBox(height: 16),
                                       Card(
-                                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
                                         child: Padding(
                                           padding: const EdgeInsets.all(16),
                                           child: Row(
@@ -695,12 +678,12 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                   children: [
                                                     Text(type["label"]),
-                                                    if (type["value"] != "all")
-                                                      const Chip(
-                                                        label: Text("Premium"),
-                                                        side: BorderSide.none,
-                                                        visualDensity: VisualDensity.compact,
-                                                      ),
+                                                    // if (type["value"] != "all")
+                                                    //   const Chip(
+                                                    //     label: Text("Premium"),
+                                                    //     side: BorderSide.none,
+                                                    //     visualDensity: VisualDensity.compact,
+                                                    //   ),
                                                   ],
                                                 ),
                                               );
@@ -818,14 +801,14 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                         children: [
                                           Row(
                                             children: [
-                                              Checkbox(
-                                                value: _shuffleQuestions,
-                                                // onChanged: null,
-                                                onChanged: (value){
-                                                  setState(() {
-                                                    _shuffleQuestions = value!;
-                                                  });
-                                                }, // Disabled for demo
+                                              const Checkbox(
+                                                value: true,
+                                                onChanged: null,
+                                                // onChanged: (value){
+                                                //   setState(() {
+                                                //     _shuffleQuestions = value!;
+                                                //   });
+                                                // }, // Disabled for demo
                                               ),
                                               const SizedBox(width: 8),
                                               Text(
@@ -833,23 +816,19 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                 style: Theme.of(context).textTheme.bodyMedium,
                                               ),
                                               const SizedBox(width: 8),
-                                              const Chip(
-                                                label: Text("Premium"),
-                                                side: BorderSide.none,
-                                                visualDensity: VisualDensity.compact,
-                                              ),
+                                              
                                             ],
                                           ),
                                           Row(
                                             children: [
-                                              Checkbox(
-                                                value: _shuffleOptions,
-                                                // onChanged: null, // Disabled for demo
-                                                onChanged: (value){
-                                                  setState(() {
-                                                    _shuffleOptions = value!;
-                                                  });
-                                                },
+                                              const Checkbox(
+                                                value: true,
+                                                onChanged: null, // Disabled for demo
+                                                // onChanged: (value){
+                                                //   setState(() {
+                                                //     _shuffleOptions = value!;
+                                                //   });
+                                                // },
                                               ),
                                               const SizedBox(width: 8),
                                               Text(
@@ -857,11 +836,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                 style: Theme.of(context).textTheme.bodyMedium,
                                               ),
                                               const SizedBox(width: 8),
-                                              const Chip(
-                                                label: Text("Premium"),
-                                                side: BorderSide.none,
-                                                visualDensity: VisualDensity.compact,
-                                              ),
+                                              
                                             ],
                                           ),
                                         ],
@@ -869,7 +844,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                       
                                       const SizedBox(height: 16),
                                       Card(
-                                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
                                         child: Padding(
                                           padding: const EdgeInsets.all(16),
                                           child: Row(
@@ -884,7 +859,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    "170 questions",
+                                                    "40 questions",
                                                     style: Theme.of(context).textTheme.bodySmall,
                                                   ),
                                                 ],
@@ -919,7 +894,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
                                             ? null
                                             : () {
                                                 final config = _getSessionConfiguration();
-                                                print(config);
+                                                // print(config);
                                                 Navigator.push(
                                                   context, 
                                                   MaterialPageRoute(

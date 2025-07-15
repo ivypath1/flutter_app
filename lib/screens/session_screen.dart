@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:flutter_math_fork/flutter_math.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:ivy_path/widgets/math_content.dart';
 import 'package:ivy_path/models/result_model.dart';
 import 'package:ivy_path/screens/result_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:ivy_path/models/subject_model.dart';
+import 'package:ivy_path/services/records_service.dart';
+import 'package:ivy_path/utitlity/responsiveness.dart';
+import 'package:ivy_path/utitlity/calculator_dialog.dart';
 
 class SessionPage extends StatefulWidget {
   final String mode; // 'study', 'practice', or 'mock'
@@ -14,7 +16,7 @@ class SessionPage extends StatefulWidget {
   final bool shuffleQuestions;
   final List<Map<String, dynamic>> subjects;
   final PracticeRecord? fromRecord;
-  
+
   const SessionPage({
     super.key, 
     required this.mode,
@@ -40,8 +42,8 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
   Duration _remainingTime = Duration.zero;
   late Timer _timer;
   bool _showCorrectAnswer = false;
-  bool _showFullQuestionSheet = false;
   final practiceRecordBox = Hive.openBox<PracticeRecord>('results');
+  final RecordsService recordService = RecordsService();
 
   // Time tracking variables
   final Map<String, Duration> _subjectTimeSpent = {};
@@ -50,7 +52,7 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
 
   // Hive data
   List<Subject> _subjects = [];
-  Map<int, List<Question>> _questions = {};
+  final Map<int, List<Question>> _questions = {};
   PracticeRecord? _currentPracticeRecord;
 
   @override
@@ -104,66 +106,93 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
     final questionsBox = await Hive.openBox<Question>('questions');
 
     // Load subjects
-    _subjects = widget.subjects.map((subjectConfig) {
-      final subject = subjectsBox.get(subjectConfig['id']);
-      
-      if (subject == null) {
-        throw Exception('Subject ${subjectConfig['id']} not found in Hive');
-      }
-      return subject;
-    }).toList();
 
-    // Load questions for each subject based on config
-    for (var config in widget.subjects) {
-      final int subjectId = config['id'];
-      final int sectionId = config['section'];
-      final int questionCount = config['questions'];
+    if (widget.fromRecord == null){
+      _subjects = widget.subjects.map((subjectConfig) {
+        final subject = subjectsBox.get(subjectConfig['id']);
+        
+        if (subject == null) {
+          throw Exception('Subject ${subjectConfig['id']} not found in Hive');
+        }
+        return subject;
+      }).toList();
+    } else {
+      // Load subjects from the results in the record
+      _subjects = widget.fromRecord!.results.map((result) {
+        final subject = subjectsBox.get(result.subjectId);
+        if (subject == null) {
+          throw Exception('Subject ${result.subjectId} not found in Hive');
+        }
+        return subject;
+      }).toList();
+    }
 
-      final subject = subjectsBox.get(subjectId);
-      if (subject == null) continue;
+    if (widget.fromRecord == null){
+      // Load questions for each subject based on config
+      for (var config in widget.subjects) {
+        final int subjectId = config['id'];
+        final int sectionId = config['section'];
+        final int questionCount = config['questions'];
 
-      // Filter questions by section
-      List<Question> subjectQuestions = [];
+        final subject = subjectsBox.get(subjectId);
+        if (subject == null) continue;
 
-      if (sectionId == 0) {
-        // Get all sections' questions
-        for (var section in subject.sections) {
+        // Filter questions by section
+        List<Question> subjectQuestions = [];
+
+        if (sectionId == 0) {
+          // Get all sections' questions
+          for (var section in subject.sections) {
+            subjectQuestions.addAll(
+              questionsBox.values.where((q) => q.sectionId == section.id),
+            );
+          }
+        } else {
+          // Get specific section's questions
           subjectQuestions.addAll(
-            questionsBox.values.where((q) => q.sectionId == section.id),
+            questionsBox.values.where((q) => q.sectionId == sectionId),
           );
         }
-      } else {
-        // Get specific section's questions
-        subjectQuestions.addAll(
-          questionsBox.values.where((q) => q.sectionId == sectionId),
-        );
-      }
 
-      // Shuffle questions if needed and not viewing a record
-      if (widget.shuffleQuestions && widget.fromRecord == null) {
-        subjectQuestions.shuffle();
-      }
+        // Shuffle questions if needed and not viewing a record
+        if (widget.shuffleQuestions && widget.fromRecord == null) {
+          subjectQuestions.shuffle();
+        }
 
-      // Limit to required number of questions
-      final selectedQuestions = subjectQuestions.take(questionCount).toList();
+        // Limit to required number of questions
+        final selectedQuestions = subjectQuestions.take(questionCount).toList();
 
-      // Shuffle options if needed and not viewing a record
-      if (widget.shuffleOptions && widget.fromRecord == null) {
-        for (var question in selectedQuestions) {
-          question.options.shuffle();
+        // Shuffle options if needed and not viewing a record
+        if (widget.shuffleOptions && widget.fromRecord == null) {
+          for (var question in selectedQuestions) {
+            question.options.shuffle();
+          }
+        }
+
+        // Add to _questions map
+        _questions[subjectId] = selectedQuestions;
+
+        // Initialize default answers for all questions in this subject if not viewing a record
+        if (widget.fromRecord == null) {
+          final defaultAnswers = <int, List>{};
+          for (var question in selectedQuestions) {
+            defaultAnswers[question.id] = [question.id, '']; // [questionId, empty answer]
+          }
+          _answeredQuestions[subjectId] = defaultAnswers;
         }
       }
-
-      // Add to _questions map
-      _questions[subjectId] = selectedQuestions;
-
-      // Initialize default answers for all questions in this subject if not viewing a record
-      if (widget.fromRecord == null) {
-        final defaultAnswers = <int, List>{};
-        for (var question in selectedQuestions) {
-          defaultAnswers[question.id] = [question.id, '']; // [questionId, empty answer]
-        }
-        _answeredQuestions[subjectId] = defaultAnswers;
+    } else {
+      // Load questions for each subject from the record's answers
+      for (var result in widget.fromRecord!.results) {
+        // Get all question IDs from the answers
+        final questionIds = result.answers.keys.toList();
+        // Retrieve the actual Question objects from Hive
+        final questionsList = questionIds
+            .map((qid) => questionsBox.get(qid))
+            .where((q) => q != null)
+            .cast<Question>()
+            .toList();
+        _questions[result.subjectId] = questionsList;
       }
     }
 
@@ -240,7 +269,7 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
         _currentQuestion++;
         _selectedAnswer = _answeredQuestions[_currentSubject["id"]]?[_currentQuestionData?.id ?? 0]?[1];
         _showExplanation = false;
-        _showCorrectAnswer = false;
+        _showCorrectAnswer = _sessionSubmitted || widget.mode == 'study';
       });
     } else if (widget.mode == 'practice' && !_sessionSubmitted) {
       _submitSession();
@@ -282,7 +311,31 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
     });
   }
 
-  void _submitSession() {
+  void _submitSession() async {
+    // Show confirmation dialog
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Submission'),
+          content: const Text('Are you sure you want to submit this session? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Submit'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // If user cancels, return without submitting
+    if (confirm != true) return;
+
     // Pause timer for current subject before submitting
     if (_currentActiveSubject != null) {
       _pauseSubjectTimer(_currentActiveSubject!);
@@ -313,13 +366,17 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
       id: DateTime.now().millisecondsSinceEpoch,
       duration: widget.duration,
       mode: widget.mode,
-      isDraft: false,
+      isDraft: true,
       results: subjectResults,
     );
 
     // Save to Hive
-    practiceRecordBox.then((box) {
-      box.add(_currentPracticeRecord!);
+    practiceRecordBox.then((box) async {
+      final newRecordKey = await box.add(_currentPracticeRecord!);
+      // Save to backend if not viewing a record
+      if (widget.fromRecord == null) {
+        recordService.addDraftRecordToBackend(newRecordKey);
+      }
     });
 
     setState(() {
@@ -337,14 +394,6 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
     
     Navigator.push(context, MaterialPageRoute(builder: (context) => ResultPage(
       isPracticeMode: widget.mode == 'practice',
-      userData: const {
-        'name': 'John Doe',
-        'examNumber': 'PR20230001',
-        'admissionType': 'UTME',
-        'state': 'Lagos',
-        'lga': 'Ikeja',
-        'phone': '08012345678',
-      },
       subjectResults: _currentPracticeRecord!.results.map((result) => SubjectResult(
         subject: _subjects.firstWhere((s) => s.id == result.subjectId).name,
         score: result.score,
@@ -361,13 +410,13 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
     return "$hours:$minutes:$seconds";
   }
 
-  Map<String, dynamic> get _currentSubject => widget.subjects[_currentSubjectIndex];
+  Map<String, dynamic> get _currentSubject => {...widget.subjects[_currentSubjectIndex], "name": _subjects[_currentSubjectIndex].name};
   int get _totalQuestions => (_questions[_currentSubject["id"]] ?? []).length;
-  Question? get _currentQuestionData => 
-      _questions[_currentSubject["id"]]?[_currentQuestion - 1];
+  Question? get _currentQuestionData => _questions[_currentSubject["id"]]?[_currentQuestion - 1];
+
 
   Widget _buildQuestionNumberButton(int questionNumber) {
-    final questionId = _questions[_currentSubject["id"]]?[questionNumber - 1]?.id ?? 0;
+    final questionId = _questions[_currentSubject["id"]]?[questionNumber - 1].id ?? 0;
     final isAnswered = _answeredQuestions[_currentSubject["id"]]?[questionId]?[1] != null && 
                       _answeredQuestions[_currentSubject["id"]]?[questionId]?[1] != '';
     final isCurrent = _currentQuestion == questionNumber;
@@ -394,8 +443,8 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
         borderColor = Colors.red;
       }
     } else if (isAnswered) {
-      backgroundColor = Theme.of(context).colorScheme.primary.withOpacity(0.05);
-      borderColor = Theme.of(context).colorScheme.primary.withOpacity(0.5);
+      backgroundColor = Colors.red.withOpacity(0.1);
+      borderColor = Colors.red;
     }
 
     return SizedBox(
@@ -424,7 +473,12 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 640;
-    
+
+    if (_currentQuestionData == null) {
+      // print(_questions);
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -479,6 +533,17 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
                 ],
               ),
           ],
+          IconButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => CalculatorDialog(
+                  controller: TextEditingController(),
+                ),
+              );
+            },
+            icon: Icon(Icons.calculate, size: 30, color: Theme.of(context).iconTheme.color),
+          ),
           _sessionSubmitted
               ? ElevatedButton(
                   onPressed: _viewResults,
@@ -522,7 +587,7 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
                                 children: [
                                   Badge(
                                     label: Text("Question $_currentQuestion"),
-                                    backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                                   ),
                                   SizedBox(
                                     width: 100,
@@ -602,8 +667,8 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
-                                              child: Text(
-                                                "${option["id"]}. ${option["text"]}",
+                                              child: MathContentWidget(
+                                                content: option["text"],
                                                 style: TextStyle(
                                                   color: showAsCorrect
                                                       ? Colors.green
@@ -653,6 +718,15 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
                         ),
                       ],
                       const SizedBox(height: 16),
+                      if (screenWidth < 650) ...[
+                        if (widget.mode == 'study' || _sessionSubmitted) ...[
+                          OutlinedButton(
+                            onPressed: () => (widget.mode == 'study' && !_showExplanation)? null : setState(() => _showExplanation = !_showExplanation),
+                            child: Text(_showExplanation ? "Hide Explanation" : "Show Explanation"),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                      ],
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -662,7 +736,7 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
                           ),
                           Row(
                             children: [
-                              if (widget.mode == 'study' || _sessionSubmitted) ...[
+                              if ((widget.mode == 'study' || _sessionSubmitted) && screenWidth > 650) ...[
                                 OutlinedButton(
                                   onPressed: () => (widget.mode == 'study' && !_showExplanation)? null : setState(() => _showExplanation = !_showExplanation),
                                   child: Text(_showExplanation ? "Hide Explanation" : "Show Explanation"),
@@ -710,7 +784,7 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
               // Sidebar - hidden on mobile
               if (!isMobile) ...[
                 Container(
-                  width: 200,
+                  width: mediaSetup(screenWidth, md: 250, lg: 400),
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
@@ -799,160 +873,5 @@ class _SessionPageState extends State<SessionPage> with SingleTickerProviderStat
         ],
       ),
     );
-  }
-}
-
-class MathContentWidget extends StatelessWidget {
-  final String content;
-
-  const MathContentWidget({super.key, required this.content});
-
-  @override
-  Widget build(BuildContext context) {
-    // Check for math content
-    if (content.contains(r'$$') || content.contains(r'$')) {
-      return MathRenderer(mathText: content);
-    } 
-    // Check for markdown content
-    else if (content.contains('|') || 
-             content.contains('#') || 
-             content.contains('*') ||
-             content.contains('```')) {
-      return Markdown(
-        data: content,
-        selectable: true,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-      );
-    } 
-    // Plain text
-    else {
-      return Text(content, style: const TextStyle(fontSize: 16));
-    }
-  }
-}
-
-class MathRenderer extends StatelessWidget {
-  final String mathText;
-
-  const MathRenderer({super.key, required this.mathText});
-
-  @override
-  Widget build(BuildContext context) {
-    // Split the text by newlines first to handle paragraphs
-    final paragraphs = mathText.split(r'\n');
-    List<Widget> paragraphWidgets = [];
-
-    for (String paragraph in paragraphs) {
-      if (paragraph.isEmpty) {
-        // Add an empty space for blank lines
-        paragraphWidgets.add(const SizedBox(height: 16));
-        continue;
-      }
-
-      // Process each paragraph separately
-      List<InlineSpan> spans = [];
-      String remainingText = paragraph;
-      
-      while (remainingText.isNotEmpty) {
-        // Check for display math first ($$...$$)
-        final displayMathMatch = RegExp(r'\$\$(.*?)\$\$', dotAll: true).firstMatch(remainingText);
-        
-        if (displayMathMatch != null && displayMathMatch.start == 0) {
-          // Handle display math at the beginning of the paragraph
-          // For display math, we want to create a separate widget
-          if (spans.isNotEmpty) {
-            // Add the accumulated text spans as a RichText widget
-            paragraphWidgets.add(RichText(text: TextSpan(children: spans, style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            fontSize: 16
-                          ),)));
-            spans = [];
-          }
-          
-          String mathExpression = displayMathMatch.group(1)!.trim();
-          paragraphWidgets.add(_buildDisplayMath(mathExpression));
-          remainingText = remainingText.substring(displayMathMatch.end);
-          continue;
-        } 
-        
-        // Check for inline math ($...$)
-        final inlineMathMatch = RegExp(r'\$(.*?)\$').firstMatch(remainingText);
-        
-        if (inlineMathMatch != null) {
-          // Add text before the math expression as a TextSpan
-          if (inlineMathMatch.start > 0) {
-            final textBefore = remainingText.substring(0, inlineMathMatch.start);
-            spans.add(TextSpan(text: textBefore));
-          }
-          
-          // Add the math expression as an inline widget span
-          String mathExpression = inlineMathMatch.group(1)!;
-          spans.add(WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: _buildInlineMath(mathExpression),
-          ));
-          
-          // Update remaining text
-          remainingText = remainingText.substring(inlineMathMatch.end);
-        } else {
-          // No more math expressions, add the remaining text
-          spans.add(TextSpan(text: remainingText));
-          break;
-        }
-      }
-
-      // Add any remaining spans for this paragraph
-      if (spans.isNotEmpty) {
-        paragraphWidgets.add(RichText(
-          text: TextSpan(
-            children: spans,
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 16),
-          ),
-        ));
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: paragraphWidgets,
-    );
-  }
-  
-  // Helper for display math
-  Widget _buildDisplayMath(String expression) {
-    // Clean the expression
-    expression = _cleanMathExpression(expression);
-    
-    return Container(
-      width: double.infinity,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Math.tex(
-        expression,
-        textStyle: const TextStyle(fontSize: 18),
-        mathStyle: MathStyle.display,
-        onErrorFallback: (FlutterMathException e) => 
-            Text("Math error: ${e.message}", style: const TextStyle(color: Colors.red)),
-      ),
-    );
-  }
-  
-  // Helper for inline math
-  Widget _buildInlineMath(String expression) {
-    // Clean the expression
-    expression = _cleanMathExpression(expression);
-    
-    return Math.tex(
-      expression,
-      textStyle: const TextStyle(fontSize: 16),
-      onErrorFallback: (FlutterMathException e) => 
-          Text("Math error: ${e.message}", style: const TextStyle(color: Colors.red, fontSize: 14)),
-    );
-  }
-  
-  // Clean math expressions
-  String _cleanMathExpression(String expression) {
-    // Replace double backslashes with single ones for TeX
-    return expression.replaceAll(r'\\', r'\');
   }
 }

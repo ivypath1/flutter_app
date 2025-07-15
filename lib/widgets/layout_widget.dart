@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ivy_path/providers/auth_provider.dart';
+import 'dart:io' show Platform;
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key, this.activeIndex=1});
@@ -11,10 +12,11 @@ class AppDrawer extends StatelessWidget {
     final theme = Theme.of(context);
     final auth = context.watch<AuthProvider>();
     final user = auth.authData?.user;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     
     return Container(
-      width: 280,
+      width: 280,     
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: Border(
@@ -26,9 +28,15 @@ class AppDrawer extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24,30, 24, 18),
             child: Row(
               children: [
+                const SizedBox(height: 25),
+                Image.asset(
+                  isDark ? 'assets/images/logo.png' : 'assets/images/logo_light.png',
+                  height: 32,
+                ),
+                const SizedBox(width: 12),
                 Text(
                   'IvyPath',
                   style: theme.textTheme.headlineMedium?.copyWith(
@@ -64,22 +72,24 @@ class AppDrawer extends StatelessWidget {
                 ),
                 _DrawerItem(
                   icon: Icons.trending_up,
-                  title: 'My Progress',
+                  title: 'Performance',
                   isSelected: activeIndex == 4,
                   onTap: () {Navigator.pushNamed(context, '/performance');},
                 ),
-                _DrawerItem(
-                  icon: Icons.book,
-                  title: 'Discussion forum',
-                  isSelected: activeIndex == 5,
-                  onTap: () {Navigator.pushNamed(context, '/forum');},
-                ),
-                _DrawerItem(
-                  icon: Icons.notifications,
-                  title: 'Notifications',
-                  isSelected: activeIndex == 6,
-                  onTap: () {Navigator.pushNamed(context, '/notifications');},
-                ),
+                if(Platform.isAndroid || Platform.isIOS)...[
+                  _DrawerItem(
+                    icon: Icons.book,
+                    title: 'Discussion forum',
+                    isSelected: activeIndex == 5,
+                    onTap: () {Navigator.pushNamed(context, '/forum');},
+                  ),
+                  _DrawerItem(
+                    icon: Icons.notifications,
+                    title: 'Notifications',
+                    isSelected: activeIndex == 6,
+                    onTap: () {Navigator.pushNamed(context, '/notifications');},
+                  ),
+                ],
                 _DrawerItem(
                   icon: Icons.person,
                   title: 'Profile',
@@ -105,7 +115,10 @@ class AppDrawer extends StatelessWidget {
                   CircleAvatar(
                     radius: 24,
                     backgroundImage: NetworkImage(
-                      user?.image ?? 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
+                      user != null 
+                        ? user.image ??
+                          'https://ui-avatars.com/api/?name=${Uri.encodeComponent(user.firstName)}&background=0D8ABC&color=fff'
+                        : 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -208,7 +221,9 @@ class IvyAppBar extends StatelessWidget {
       actions: actions ?? [
         IconButton(
           icon: const Icon(Icons.notifications_outlined),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.pushNamed(context, '/notifications');
+          },
         ),
         const SizedBox(width: 8),
       ],
@@ -238,7 +253,7 @@ class IvyNavRail extends StatelessWidget {
         ),
         NavigationRailDestination(
           icon: Icon(Icons.trending_up),
-          label: Text('Progress'),
+          label: Text('performance'),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.notifications),

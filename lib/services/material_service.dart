@@ -41,9 +41,9 @@ class MaterialService {
           .toList();
 
       // Cache materials
-      final materialsBox = await Hive.openBox<Material>('materials');
-      await materialsBox.clear();
-      await materialsBox.addAll(materials);
+      // final materialsBox = await Hive.openBox<Material>('materials');
+      // await materialsBox.clear();
+      // await materialsBox.addAll(materials);
 
       return materials;
     } catch (e) {
@@ -51,9 +51,7 @@ class MaterialService {
       try {
         final materialsBox = await Hive.openBox<Material>('materials');
         final materials = materialsBox.values.toList();
-        if (materials.isNotEmpty) {
-          return materials;
-        }
+        return materials;
       } catch (_) {
         // If we can't get cached materials, rethrow the original error
       }
@@ -66,7 +64,7 @@ class MaterialService {
       // Get application documents directory
       final directory = await _getPrivateDirectory();
       final filePath = '${directory.path}/$materialId.pdf';
-      print(filePath);
+      // print(filePath);
       return await File(filePath).exists();
     } catch(e) {
       return false;
@@ -107,6 +105,15 @@ class MaterialService {
         value: _key.base64,
       );
 
+      await _storage.write(
+        key: 'material_iv_${material.id}',
+        value: _iv.base64,
+      );
+
+      // Cache materials
+      final materialsBox = await Hive.openBox<Material>('materials');
+      await materialsBox.add(material);
+
       return filePath;
     } catch (e) {
       rethrow;
@@ -140,4 +147,40 @@ class MaterialService {
       throw UnimplementedError('Web platform not supported for file download');
     }
   }
+
+  Future<File> getLocalMaterial(int materialId) async {
+    // Read the saved key for this material
+    final keyBase64 = await _storage.read(key: 'material_key_$materialId');
+    final ivBase64 = await _storage.read(key: 'material_iv_$materialId');
+    if (keyBase64 == null) {
+      throw Exception('No encryption key found for material $materialId');
+    }
+    if (ivBase64 == null) {
+      throw Exception('No encryption iv found for material $materialId');
+    }
+
+    final key = encrypt.Key.fromBase64(keyBase64);
+    final iv = encrypt.IV.fromBase64(ivBase64);
+    final encrypter = encrypt.Encrypter(encrypt.AES(key));
+
+    // Load encrypted file
+    final directory = await _getPrivateDirectory();
+    final encryptedFilePath = '${directory.path}/$materialId.pdf';
+    final encryptedBytes = await File(encryptedFilePath).readAsBytes();
+
+    // ecrypt
+    final decryptedBytes = encrypter.decryptBytes(
+      encrypt.Encrypted(encryptedBytes),
+      iv: iv,
+    );
+
+    // Write to temp file and return
+    final tempDir = await getTemporaryDirectory();
+    final decryptedFile = File('${tempDir.path}/$materialId-decrypted.pdf');
+
+    await decryptedFile.writeAsBytes(decryptedBytes);
+
+    return decryptedFile;
+  }
+
 }

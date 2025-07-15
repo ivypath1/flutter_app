@@ -19,7 +19,7 @@ class ApiService {
         'name': deviceName,
         'unique_id': deviceId,
       });
-
+      
       return AuthResponse.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {

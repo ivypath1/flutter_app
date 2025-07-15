@@ -1,154 +1,217 @@
 import 'package:flutter/material.dart';
-import 'package:ivy_path/screens/forum/forum_topic_page.dart';
-import 'package:ivy_path/screens/notifications/notification_Screen.dart';
-import 'package:ivy_path/screens/notifications/notification_Screen.dart' as note;
-import 'package:ivy_path/utitlity/responsiveness.dart';
+import 'package:ivy_path/services/notification_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+class NotificationDetailScreen extends StatelessWidget {
+  final NotificationItem notification;
 
-class NotificationDetailsPage extends StatelessWidget {
-  final note.Notification notification;
-
-  const NotificationDetailsPage({super.key, required this.notification});
+  const NotificationDetailScreen({
+    super.key,
+    required this.notification,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final mediaWidth = MediaQuery.of(context).size.width;
     final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notification'),
+        title: const Text('Notification Details'),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(mediaSetup(mediaWidth, sm: 16, md: 24, lg: 32)),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header
             Row(
               children: [
-                _buildNotificationIcon(notification.type, context, mediaWidth),
-                SizedBox(width: mediaSetup(mediaWidth, sm: 12, md: 16, lg: 20)),
-                Text(
-                  notification.title,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                CircleAvatar(
+                  backgroundColor: _getNotificationColor(notification.type).withOpacity(0.2),
+                  radius: 24,
+                  child: Icon(
+                    _getNotificationIcon(notification.type),
+                    color: _getNotificationColor(notification.type),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notification.title,
+                        style: theme.textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        timeago.format(notification.createdAt),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            SizedBox(height: mediaSetup(mediaWidth, sm: 16, md: 24, lg: 32)),
-            Text(
-              timeago.format(notification.createdAt),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.outline,
-              ),
-            ),
-            SizedBox(height: mediaSetup(mediaWidth, sm: 8, md: 12, lg: 16)),
+            const SizedBox(height: 24),
+
+            // Content
             Card(
-              elevation: 0,
-              color: theme.colorScheme.surfaceVariant,
               child: Padding(
-                padding: EdgeInsets.all(mediaSetup(mediaWidth, sm: 16, md: 20, lg: 24)),
+                padding: const EdgeInsets.all(16),
                 child: Text(
                   notification.message,
                   style: theme.textTheme.bodyLarge,
                 ),
               ),
             ),
-            SizedBox(height: mediaSetup(mediaWidth, sm: 24, md: 32, lg: 40)),
-            if (notification.payload != null) ...[
+            const SizedBox(height: 24),
+
+            // Additional Data
+            if (notification.data != null) ...[
               Text(
-                'Actions',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                'Additional Information',
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: notification.data!.length,
+                  separatorBuilder: (context, index) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final entry = notification.data!.entries.elementAt(index);
+                    return ListTile(
+                      title: Text(
+                        entry.key,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(entry.value.toString()),
+                    );
+                  },
                 ),
               ),
-              SizedBox(height: mediaSetup(mediaWidth, sm: 8, md: 12, lg: 16)),
-              _buildActionButtons(context),
             ],
+
+            const SizedBox(height: 24),
+
+            // Action Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (_getActionButton(notification.type) != null)
+                  ElevatedButton.icon(
+                    onPressed: () => _handleAction(context),
+                    icon: Icon(_getActionIcon(notification.type)),
+                    label: Text(_getActionLabel(notification.type)),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNotificationIcon(NotificationType type, BuildContext context, mediaWidth) {
-    IconData icon;
-    Color color;
-
+  IconData _getNotificationIcon(String type) {
     switch (type) {
-      case NotificationType.forum:
-        icon = Icons.forum;
-        color = Colors.blue;
-        break;
-      case NotificationType.test:
-        icon = Icons.assignment;
-        color = Colors.green;
-        break;
-      case NotificationType.study:
-        icon = Icons.school;
-        color = Colors.orange;
-        break;
-      case NotificationType.system:
-        icon = Icons.notifications;
-        color = Colors.purple;
-        break;
+      case 'forum':
+        return Icons.forum;
+      case 'practice':
+        return Icons.assignment;
+      case 'material':
+        return Icons.book;
+      case 'system':
+        return Icons.notifications;
+      default:
+        return Icons.notifications;
     }
-
-    return CircleAvatar(
-      radius: mediaSetup(mediaWidth, sm: 20, md: 24, lg: 28),
-      backgroundColor: color.withOpacity(0.2),
-      child: Icon(icon, size: mediaSetup(mediaWidth, sm: 20, md: 24, lg: 28), color: color),
-    );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Color _getNotificationColor(String type) {
+    switch (type) {
+      case 'forum':
+        return Colors.blue;
+      case 'practice':
+        return Colors.green;
+      case 'material':
+        return Colors.orange;
+      case 'system':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget? _getActionButton(String type) {
+    if (notification.data == null) return null;
+    
+    switch (type) {
+      case 'forum':
+      case 'practice':
+      case 'material':
+        return ElevatedButton(
+          onPressed: () {},
+          child: Text(_getActionLabel(type)),
+        );
+      default:
+        return null;
+    }
+  }
+
+  String _getActionLabel(String type) {
+    switch (type) {
+      case 'forum':
+        return 'View Discussion';
+      case 'practice':
+        return 'Start Practice';
+      case 'material':
+        return 'View Material';
+      default:
+        return 'View';
+    }
+  }
+
+  IconData _getActionIcon(String type) {
+    switch (type) {
+      case 'forum':
+        return Icons.forum;
+      case 'practice':
+        return Icons.play_arrow;
+      case 'material':
+        return Icons.book;
+      default:
+        return Icons.arrow_forward;
+    }
+  }
+
+  void _handleAction(BuildContext context) {
+    if (notification.data == null) return;
+
     switch (notification.type) {
-      case NotificationType.forum:
-        return ElevatedButton(
-          onPressed: () {
-            // Navigate to forum topic
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ForumTopicPage(
-                  topicId: notification.payload!['topicId'],
-                ),
-              ),
-            );
-          },
-          child: const Text('View Discussion'),
-        );
-      case NotificationType.test:
-        return ElevatedButton(
-          onPressed: () {
-            // Navigate to test results
-            // Navigator.push(
-            //   context,
-            //   MaterialPageRoute(
-            //     builder: (context) => TestResultsPage(
-            //       testId: notification.payload!['testId'],
-            //     ),
-            //   ),
-            // );
-          },
-          child: const Text('View Test Results'),
-        );
-      case NotificationType.study:
-        return ElevatedButton(
-          onPressed: () {
-            // Navigate to study session
-          },
-          child: const Text('Start Study Session'),
-        );
-      case NotificationType.system:
-        return ElevatedButton(
-          onPressed: () {
-            // Check new features
-          },
-          child: const Text('Explore Features'),
-        );
+      case 'forum':
+        if (notification.data!['topicId'] != null) {
+          Navigator.pushNamed(
+            context,
+            '/forum/topic/${notification.data!['topicId']}',
+          );
+        }
+        break;
+      case 'practice':
+        Navigator.pushNamed(context, '/practice');
+        break;
+      case 'material':
+        if (notification.data!['materialId'] != null) {
+          Navigator.pushNamed(
+            context,
+            '/materials/${notification.data!['materialId']}',
+          );
+        }
+        break;
     }
   }
 }

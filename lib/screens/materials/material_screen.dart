@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:ivy_path/models/subject_model.dart';
+import 'package:ivy_path/screens/materials/pdf_viewer_screen.dart';
 import 'package:ivy_path/widgets/layout_widget.dart';
 import 'package:ivy_path/services/material_service.dart';
 import '/models/material_model.dart' as mm;
@@ -15,6 +18,17 @@ double mediaSetup(double size, {double? sm, double? md, double? lg}) {
   }
 }
 
+IconData getIcon(String name) {
+  switch (name.toLowerCase()) {
+    case 'mathematics':
+      return Icons.calculate;
+    case 'physics' || "chemistry" || "biology":
+      return Icons.science;
+    default:
+      return Icons.article;
+  }
+}
+
 class MaterialsPage extends StatefulWidget {
   const MaterialsPage({super.key});
 
@@ -26,6 +40,8 @@ class _MaterialsPageState extends State<MaterialsPage> {
   final MaterialService _materialService = MaterialService();
   List<mm.Material> materials = [];
   List<mm.Material> filteredMaterials = [];
+  List<AvailableSubject> availableSubjects = [];
+  Map<int, SubjectInfo> SUBJECTS = {};
   bool loading = true;
   String? error;
 
@@ -37,7 +53,22 @@ class _MaterialsPageState extends State<MaterialsPage> {
   @override
   void initState() {
     super.initState();
+    _updateAvailableSubjects();
     _loadMaterials();
+  }
+
+  void _updateAvailableSubjects() {
+    final subjectsBox = Hive.box<Subject>('subjects');
+    SUBJECTS = {
+      for (var subject in subjectsBox.values)
+        subject.id: SubjectInfo(name: subject.name, icon: getIcon(subject.name)),
+    };
+    
+    setState(() {
+      availableSubjects = subjectsBox.values
+          .map((subject) => AvailableSubject(id: subject.id, name: subject.name))
+          .toList();
+    });
   }
 
   Future<void> _loadMaterials() async {
@@ -119,7 +150,14 @@ class _MaterialsPageState extends State<MaterialsPage> {
     final isTablet = mediaWidth >= 600;
     
     if (loading) {
-      return _buildLoadingSkeleton(mediaWidth);
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (error != null) {
+      return _buildErrorWidget();
+
     }
     
     if (error != null) {
@@ -153,7 +191,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Access demo study materials for your preparation',
+                          'Access premium study materials for your preparation',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                         const SizedBox(height: 24),
@@ -163,7 +201,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
                         const SizedBox(height: 16),
                         
                         // Demo Version Notice
-                        _buildDemoNoticeCard(),
+                        // _buildDemoNoticeCard(),
                         const SizedBox(height: 24),
                         
                         // Materials Grid
@@ -175,7 +213,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
                         const SizedBox(height: 24),
                         
                         // Premium and App Download Cards
-                        _buildPromoCards(mediaWidth),
+                        // _buildPromoCards(mediaWidth),
                       ],
                     ),
                   ),
@@ -232,7 +270,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
                       value: subject.id.toString(),
                       child: Text(subject.name),
                     );
-                  }).toList(),
+                  }),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -400,7 +438,11 @@ class _MaterialsPageState extends State<MaterialsPage> {
                               );
                             }
                             return IconButton(
-                              onPressed: () => snapshot.data! ? {} : _downloadMaterial(material), 
+                              onPressed: () async {
+                               snapshot.data! ? {} : 
+                               await _downloadMaterial(material);
+                                setState(() {});
+                              },
                               icon: snapshot.data! ? const Icon(Icons.download_done) : const Icon(Icons.download)
                             );
                           }
@@ -430,8 +472,34 @@ class _MaterialsPageState extends State<MaterialsPage> {
                           backgroundColor: Colors.grey[200],
                         ),
                         ElevatedButton(
-                          onPressed: () {
-                            // Navigate to material detail
+                          onPressed: () async {
+                            final isDownloaded = await _materialService.isDownloaded(material.id);
+                            if (!isDownloaded) {
+                              // If not downloaded, view from URL
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PDFViewerScreen(
+                                    source: material.file,
+                                    title: material.title,
+                                    isUrl: true,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              // If downloaded, view from local file
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PDFViewerScreen(
+                                    source: '${material.id}',
+                                    title: material.title,
+                                    isUrl: false,
+                                  ),
+                                ),
+                              );
+                              
+                            }
                           },
                           child: const Text('View Material'),
                         ),
@@ -701,20 +769,9 @@ class SubjectInfo {
   SubjectInfo({required this.name, required this.icon});
 }
 
-final Map<int, SubjectInfo> SUBJECTS = {
-  1: SubjectInfo(name: "Mathematics", icon: Icons.calculate),
-  2: SubjectInfo(name: "Physics", icon: Icons.science),
-  3: SubjectInfo(name: "Chemistry", icon: Icons.science),
-  4: SubjectInfo(name: "Biology", icon: Icons.science),
-  5: SubjectInfo(name: "History", icon: Icons.book),
-  6: SubjectInfo(name: "Geography", icon: Icons.book),
-  7: SubjectInfo(name: "Civics", icon: Icons.book),
-  8: SubjectInfo(name: "English", icon: Icons.book),
-};
-
-final availableSubjects = SUBJECTS.entries.map((entry) {
-  return AvailableSubject(id: entry.key, name: entry.value.name);
-}).toList();
+// final availableSubjects = SUBJECTS.entries.map((entry) {
+//   return AvailableSubject(id: entry.key, name: entry.value.name);
+// }).toList();
 
 class AvailableSubject {
   final int id;

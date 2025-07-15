@@ -189,7 +189,7 @@ class _NewTopicPageState extends State<NewTopicPage> {
                               controller: _titleController,
                               decoration: InputDecoration(
                                 hintText: 'Enter your topic title',
-                                border: OutlineInputBorder(),
+                                border: const OutlineInputBorder(),
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: mediaSetup(mediaWidth, sm: 12, md: 16, lg: 20),
                                   vertical: mediaSetup(mediaWidth, sm: 12, md: 14, lg: 16),
@@ -291,7 +291,7 @@ class _NewTopicPageState extends State<NewTopicPage> {
                               controller: _contentController,
                               decoration: InputDecoration(
                                 hintText: 'Write your post content...',
-                                border: OutlineInputBorder(),
+                                border: const OutlineInputBorder(),
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: mediaSetup(mediaWidth, sm: 12, md: 16, lg: 20),
                                   vertical: mediaSetup(mediaWidth, sm: 12, md: 14, lg: 16),

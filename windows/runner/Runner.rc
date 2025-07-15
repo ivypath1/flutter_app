@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "ivy_path" "\0"
+            VALUE "FileDescription", "IvyPath" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "ivy_path" "\0"
+            VALUE "InternalName", "IvyPath" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "ivy_path.exe" "\0"
-            VALUE "ProductName", "ivy_path" "\0"
+            VALUE "OriginalFilename", "IvyPath.exe" "\0"
+            VALUE "ProductName", "IvyPath" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

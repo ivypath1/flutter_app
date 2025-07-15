@@ -48,7 +48,7 @@ class AuthResponseAdapter extends TypeAdapter<AuthResponse> {
 // **************************************************************************
 
 AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) => AuthResponse(
-      token: json['token'] as String,
+      token: (json['token'] ?? '') as String,
       user: User.fromJson(json['user'] as Map<String, dynamic>),
     );
 

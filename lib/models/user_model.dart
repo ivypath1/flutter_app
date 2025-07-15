@@ -21,7 +21,7 @@ class User {
   final String email;
 
   @HiveField(4)
-  final String phone;
+  final String? phone;
 
   @HiveField(5)
   final String type;
@@ -41,7 +41,10 @@ class User {
   final bool isStaff;
 
   @HiveField(10)
-  final String image;
+  final String? image;
+
+  @HiveField(11)
+  final Academics academic;
 
   User({
     required this.id,
@@ -54,9 +57,32 @@ class User {
     required this.status,
     required this.dateJoined,
     required this.isStaff,
-    required this.image,
+    this.image,
+    required this.academic,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
   Map<String, dynamic> toJson() => _$UserToJson(this);
+}
+
+@HiveType(typeId: 8)
+@JsonSerializable()
+class Academics {
+
+  @HiveField(0)
+  @JsonKey(name: 'jamb_scores')
+  final List<Map<String, dynamic>> jambScores;
+
+  @HiveField(1)
+  @JsonKey(name: 'o_level_grades')
+  final List<Map<String, dynamic>> oLevelGrades;
+
+  Academics({
+    required this.jambScores,
+    required this.oLevelGrades,
+  });
+
+  factory Academics.fromJson(Map<String, dynamic> json) => _$AcademicsFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AcademicsToJson(this);
 }

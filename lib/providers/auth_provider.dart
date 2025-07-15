@@ -14,7 +14,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   AuthResponse? _authData;
-  bool _isInitialized = false;
+  bool _isInitialized = true;
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -27,7 +27,6 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _initializeAuth() async {
-    await _storage.init();
     _authData = _storage.getAuthData();
     _isInitialized = true;
     notifyListeners();
@@ -51,7 +50,6 @@ class AuthProvider extends ChangeNotifier {
       
       return 'Unknown Device';
     } catch (e) {
-      return 'abcd';
       return 'Unknown Device';
     }
   }
@@ -74,7 +72,6 @@ class AuthProvider extends ChangeNotifier {
       
       return 'unknown';
     } catch (e) {
-      return '1234';
       return 'unknown';
     }
   }

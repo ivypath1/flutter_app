@@ -96,7 +96,7 @@ class _PerformancePageState extends State<PerformancePage> {
   }
 
   Map<String, int> _getDifficultyDistribution() {
-    final distribution = <String, int>{};
+    final distribution = <String, int>{"Easy": 0, "Medium": 0, "Hard": 0};
     for (var record in _records) {
       for (var result in record.results) {
         // Assuming difficulty is determined by score ranges
@@ -135,10 +135,10 @@ class _PerformancePageState extends State<PerformancePage> {
     }
 
     return Scaffold(
-      drawer: !isDesktop ? const AppDrawer() : null,
+      drawer: !isDesktop ? const AppDrawer(activeIndex: 4) : null,
       body: Row(
         children: [
-          if (isDesktop) const AppDrawer(),
+          if (isDesktop) const AppDrawer(activeIndex: 4),
           if (isTablet && !isDesktop) const IvyNavRail(),
           Expanded(
             child: CustomScrollView(
@@ -292,7 +292,7 @@ class _PerformancePageState extends State<PerformancePage> {
     );
   }
 
-  final maxScore = 100.0;
+  const maxScore = 100.0;
   
   return _ChartCard(
     title: 'Subject Performance Radar',
@@ -424,7 +424,7 @@ class _PerformancePageState extends State<PerformancePage> {
                 return FlSpot(entry.key.toDouble(), entry.value['score']);
               }).toList(),
               isCurved: true,
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 colors: [
                   Colors.blue,
                   Colors.purple,
@@ -462,49 +462,86 @@ class _PerformancePageState extends State<PerformancePage> {
   }
 
   Widget _buildDifficultyDistributionChart() {
-    final distribution = _getDifficultyDistribution();
-    final colors = [Colors.green, Colors.orange, Colors.red];
-    
-    return _ChartCard(
-      title: 'Question Difficulty Distribution',
-      height: 300,
-      chart: PieChart(
-        PieChartData(
-          sectionsSpace: 4,
-          centerSpaceRadius: 60,
-          sections: distribution.entries.map((entry) {
-            final index = distribution.keys.toList().indexOf(entry.key);
-            final total = distribution.values.reduce((a, b) => a + b);
-            final percentage = (entry.value / total * 100);
-            
-            return PieChartSectionData(
-              color: colors[index % colors.length],
-              value: entry.value.toDouble(),
-              title: '${percentage.round()}%',
-              radius: 80,
-              titleStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              badgeWidget: _Badge(
-                entry.key,
-                size: 40,
-                borderColor: colors[index % colors.length],
-              ),
-              badgePositionPercentageOffset: .98,
+  final distribution = _getDifficultyDistribution();
+  final colors = [Colors.green, Colors.orange, Colors.red];
+
+  final difficultyLabels = {
+    'easy': 'Easy',
+    'medium': 'Medium',
+    'hard': 'Hard',
+  };
+
+  return _ChartCard(
+    title: 'Question Difficulty Distribution',
+    height: 380, // Increased to fit legend
+    chart: Column(
+      children: [
+        SizedBox(
+          height: 300,
+          child: PieChart(
+            PieChartData(
+              sectionsSpace: 4,
+              centerSpaceRadius: 60,
+              sections: distribution.entries.map((entry) {
+                final index = distribution.keys.toList().indexOf(entry.key);
+                final total = distribution.values.reduce((a, b) => a + b);
+                final percentage = (entry.value / total * 100);
+
+                return PieChartSectionData(
+                  color: colors[index % colors.length],
+                  value: entry.value.toDouble(),
+                  title: '${percentage.round()}%',
+                  radius: 80,
+                  titleStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  badgeWidget: _Badge(
+                    entry.key,
+                    size: 40,
+                    borderColor: colors[index % colors.length],
+                  ),
+                  badgePositionPercentageOffset: .98,
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 16,
+          runSpacing: 8,
+          children: distribution.keys.map((key) {
+            final index = distribution.keys.toList().indexOf(key);
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                    width: 12,
+                    height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colors[index % colors.length],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(difficultyLabels[key] ?? key),
+              ],
             );
           }).toList(),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
+
 
   Widget _buildTimeSpentPieChart() {
     final timeSpent = <int, double>{};
     for (var record in _records) {
       for (var result in record.results) {
-        timeSpent[result.subjectId] = 
+        timeSpent[result.subjectId] =
             (timeSpent[result.subjectId] ?? 0) + result.timeSpent;
       }
     }
@@ -518,34 +555,75 @@ class _PerformancePageState extends State<PerformancePage> {
       Colors.teal,
     ];
 
+    final subjectNames = {
+      1: 'Math',
+      2: 'English',
+      3: 'Biology',
+      4: 'Chemistry',
+      5: 'Physics',
+      6: 'Geography',
+      // Replace with actual subject names
+    };
+
     return _ChartCard(
       title: 'Time Distribution by Subject',
-      height: 300,
-      chart: PieChart(
-        PieChartData(
-          sectionsSpace: 2,
-          centerSpaceRadius: 50,
-          sections: timeSpent.entries.map((entry) {
-            final index = timeSpent.keys.toList().indexOf(entry.key);
-            final total = timeSpent.values.reduce((a, b) => a + b);
-            final percentage = (entry.value / total * 100);
-            
-            return PieChartSectionData(
-              color: colors[index % colors.length],
-              value: entry.value,
-              title: '${(entry.value / 60).toStringAsFixed(1)}h',
-              radius: 90,
-              titleStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+      height: 400, // Increase to fit legend
+      chart: Column(
+        children: [
+          SizedBox(
+            height: 300,
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 2,
+                centerSpaceRadius: 50,
+                sections: timeSpent.entries.map((entry) {
+                  final index = timeSpent.keys.toList().indexOf(entry.key);
+                  final total = timeSpent.values.reduce((a, b) => a + b);
+                  final percentage = (entry.value / total * 100);
+
+                  return PieChartSectionData(
+                    color: colors[index % colors.length],
+                    value: entry.value,
+                    title: '${(entry.value / 60).toStringAsFixed(1)}h',
+                    radius: 90,
+                    titleStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  );
+                }).toList(),
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: timeSpent.keys.map((subjectId) {
+              final index = timeSpent.keys.toList().indexOf(subjectId);
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors[index % colors.length],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(_subjects[subjectId]?.name ?? 'Subject $subjectId'),
+                ],
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
+
 
   Widget _buildWeeklyHeatmapChart() {
     // Create a simple heatmap representation using containers
@@ -556,7 +634,7 @@ class _PerformancePageState extends State<PerformancePage> {
       height: 200,
       chart: GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 7,
           childAspectRatio: 1,
           crossAxisSpacing: 4,
@@ -564,7 +642,7 @@ class _PerformancePageState extends State<PerformancePage> {
         ),
         itemCount: 28, // 4 weeks
         itemBuilder: (context, index) {
-          final intensity = (index % weeklyData.length) / weeklyData.length;
+          final intensity = weeklyData.isEmpty ? 0 : (index % weeklyData.length) / weeklyData.length;
           return Container(
             decoration: BoxDecoration(
               color: Colors.blue.withOpacity(0.2 + (intensity * 0.8)),
@@ -639,7 +717,7 @@ class _PerformancePageState extends State<PerformancePage> {
               icon: Icons.schedule,
               title: 'Study Streak',
               subtitle: 'Keep up the momentum!',
-              value: '${_records.length} days',
+              value: '${calculateStudyStreak(_records)} days',
               color: Colors.blue,
             ),
           ],
@@ -647,6 +725,33 @@ class _PerformancePageState extends State<PerformancePage> {
       ),
     );
   }
+
+  int calculateStudyStreak(List<PracticeRecord> records) {
+  if (records.isEmpty) return 0;
+
+  // Extract and normalize dates (remove time)
+  final studyDates = records
+      .map((r) => DateTime(r.timestamp.year, r.timestamp.month, r.timestamp.day))
+      .toSet()
+      .toList()
+    ..sort((a, b) => b.compareTo(a)); // descending
+
+  int streak = 0;
+  DateTime today = DateTime.now();
+  today = DateTime(today.year, today.month, today.day); // normalize today
+  
+  for (int i = 0; i < studyDates.length; i++) {
+    final expectedDate = today.subtract(Duration(days: i));
+    if (studyDates.contains(expectedDate)) {
+      streak++;
+    } else {
+      break; // streak ended
+    }
+  }
+
+  return streak;
+}
+
 
   Map<String, double> _calculateStats(List<double> values) {
     if (values.isEmpty) {

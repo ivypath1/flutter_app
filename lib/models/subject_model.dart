@@ -53,9 +53,6 @@ class Section {
   });
 
   factory Section.fromJson(Map<String, dynamic> json) {
-    print(json['version'].runtimeType );
-    print(json['subject_id'].runtimeType );
-    print(json['id'].runtimeType );
     return Section(
       id: json['id'],
       name: json['name'],

@@ -133,12 +133,6 @@ class _ForumPageState extends State<ForumPage> {
       // appBar: AppBar(
       //   title: const Text('Discussion Forums'),
       // ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Navigate to new topic page
-        },
-        child: const Icon(Icons.add),
-      ),
       body: Row(
         children: [
           if (isDesktop) const AppDrawer(activeIndex: 5),
@@ -263,11 +257,11 @@ class _ForumPageState extends State<ForumPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.trending_up, color: Colors.blue),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.trending_up, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
                   'Popular Topics',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -304,11 +298,11 @@ class _ForumPageState extends State<ForumPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.access_time, color: Colors.blue),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.access_time, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
                   'Recent Activity',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -488,15 +482,34 @@ class PopularTopicItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mediaWidth = MediaQuery.of(context).size.width;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: InkWell(
         onTap: () {
           // Navigate to topic
+          Navigator.pushNamed(context, '/topic/${topic.id}');
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if(mediaWidth < 640) 
+            Wrap(
+              children: [
+                Text(
+                  topic.title,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(width: 16),
+                Chip(
+                  label: Text(categoryName),
+                  backgroundColor: Colors.grey[200],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            
+            if(mediaWidth >= 640)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -525,7 +538,7 @@ class PopularTopicItem extends StatelessWidget {
                   children: [
                     const Icon(Icons.access_time, size: 16),
                     const SizedBox(width: 4),
-                    Text('${DateFormat('MMM d').format(topic.updatedAt)}'),
+                    Text(DateFormat('MMM d').format(topic.updatedAt)),
                   ],
                 ),
               ],
@@ -547,7 +560,7 @@ class Activity {
   final String topicTitle;
   final String topicId;
   final DateTime timestamp;
-
+  
   Activity({
     required this.id,
     required this.type,

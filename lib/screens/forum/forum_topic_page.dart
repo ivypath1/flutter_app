@@ -143,7 +143,7 @@ class _ForumTopicPageState extends State<ForumTopicPage> {
 
   bool _isLiked(Map<dynamic, dynamic> likes) {
     final userId = _forumService.user.id;
-    return userId != null && likes.containsKey(userId);
+    return likes.containsKey(userId);
   }
 
   @override
@@ -372,7 +372,7 @@ class _ForumTopicPageState extends State<ForumTopicPage> {
                     TextField(
                       controller: _replyController,
                       maxLines: 5,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         hintText: 'Share your thoughts...',
                         border: OutlineInputBorder(),
                       ),

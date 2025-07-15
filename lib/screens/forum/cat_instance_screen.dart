@@ -361,9 +361,9 @@ class _ForumCategoryPageState extends State<ForumCategoryPage> {
                 ],
               ),
               SizedBox(height: mediaSetup(mediaWidth, sm: 8, md: 12, lg: 16)),
+              if(mediaWidth < 640)
               Row(
-                children: [
-                  Icon(Icons.person, size: mediaSetup(mediaWidth, sm: 12, md: 14, lg: 16)),
+                children: [Icon(Icons.person, size: mediaSetup(mediaWidth, sm: 12, md: 14, lg: 16)),
                   SizedBox(width: mediaSetup(mediaWidth, sm: 4, md: 6, lg: 8)),
                   Text(
                     topic.author.name,
@@ -371,8 +371,22 @@ class _ForumCategoryPageState extends State<ForumCategoryPage> {
                       fontSize: mediaSetup(mediaWidth, sm: 10, md: 12, lg: 14),
                       color: Colors.grey[600],
                     ),
-                  ),
-                  SizedBox(width: mediaSetup(mediaWidth, sm: 8, md: 12, lg: 16)),
+                  ),],
+              ),
+              Row(
+                children: [
+                  if(mediaWidth >= 640) ...[
+                    Icon(Icons.person, size: mediaSetup(mediaWidth, sm: 12, md: 14, lg: 16)),
+                    SizedBox(width: mediaSetup(mediaWidth, sm: 4, md: 6, lg: 8)),
+                    Text(
+                      topic.author.name,
+                      style: TextStyle(
+                        fontSize: mediaSetup(mediaWidth, sm: 10, md: 12, lg: 14),
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(width: mediaSetup(mediaWidth, sm: 8, md: 12, lg: 16)),
+                  ],
                   Icon(Icons.message, size: mediaSetup(mediaWidth, sm: 12, md: 14, lg: 16)),
                   SizedBox(width: mediaSetup(mediaWidth, sm: 4, md: 6, lg: 8)),
                   Text(

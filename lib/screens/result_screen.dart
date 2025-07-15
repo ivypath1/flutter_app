@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:ivy_path/models/user_model.dart';
+import 'package:ivy_path/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 
 class ResultPage extends StatefulWidget {
   final bool isPracticeMode;
-  final Map<String, dynamic> userData;
   final List<SubjectResult> subjectResults;
 
   const ResultPage({
     super.key,
     required this.isPracticeMode,
-    required this.userData,
     required this.subjectResults,
   });
 
@@ -25,15 +26,13 @@ class _ResultPageState extends State<ResultPage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final mediaWidth = MediaQuery.of(context).size.width;
+    final authUser = context.watch<AuthProvider>();
 
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isPracticeMode ? 'Practice Results' : 'Mock UTME Results'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.print),
-            onPressed: () => _printResult(),
-          ),
+        
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: () => _downloadResult(),
@@ -48,11 +47,11 @@ class _ResultPageState extends State<ResultPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (!widget.isPracticeMode) _buildUserInfoSection(theme),
+                if (!widget.isPracticeMode) _buildUserInfoSection(theme, authUser.authData?.user),
                 const SizedBox(height: 24),
                 widget.isPracticeMode
                     ? _buildPracticeModeContent(theme, mediaWidth)
-                    : _buildMockUTMEModeContent(theme),
+                    : _buildMockUTMEModeContent(theme, authUser.authData?.user.academic),
                 const SizedBox(height: 24),
                 // _buildWatermarkSection(),
               ],
@@ -63,7 +62,7 @@ class _ResultPageState extends State<ResultPage> {
     );
   }
 
-  Widget _buildUserInfoSection(ThemeData theme) {
+  Widget _buildUserInfoSection(ThemeData theme, User? userData) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -72,11 +71,11 @@ class _ResultPageState extends State<ResultPage> {
           children: [
             Text('Examination Result Slip', style: theme.textTheme.headlineSmall),
             const SizedBox(height: 16),
-            _buildInfoRow('Name:', widget.userData['name']),
-            _buildInfoRow('Exam No:', widget.userData['examNumber']),
-            _buildInfoRow('Admission Type:', widget.userData['admissionType']),
-            _buildInfoRow('State/LGA:', '${widget.userData['state']}/${widget.userData['lga']}'),
-            _buildInfoRow('Phone:', widget.userData['phone']),
+            _buildInfoRow('Name:', "${userData?.firstName} ${userData?.lastName}"),
+            _buildInfoRow('Exam No:', "PR20250${userData?.id ?? '0001'}"),
+            _buildInfoRow('Admission Type:', "UTME"),
+            _buildInfoRow('State/LGA:', '#####/######'),
+            _buildInfoRow('Phone:', userData?.phone ?? 'N/A'),
           ],
         ),
       ),
@@ -178,7 +177,7 @@ class _ResultPageState extends State<ResultPage> {
                       barTouchData: BarTouchData(
                         enabled: true,
                         touchTooltipData: BarTouchTooltipData(
-                          tooltipBgColor: theme.colorScheme.surfaceVariant,
+                          tooltipBgColor: theme.colorScheme.surfaceContainerHighest,
                           getTooltipItem: (group, groupIndex, rod, rodIndex) {
                             final subject = widget.subjectResults[groupIndex].subject;
                             return BarTooltipItem(
@@ -260,8 +259,8 @@ class _ResultPageState extends State<ResultPage> {
             rows: widget.subjectResults.map((result) {
               return DataRow(cells: [
                 DataCell(Text(result.subject)),
-                DataCell(Text('${result.score.toStringAsFixed(1)}')),
-                DataCell(Text('${result.timeSpent.toStringAsFixed(1)}')),
+                DataCell(Text(result.score.toStringAsFixed(1))),
+                DataCell(Text(result.timeSpent.toStringAsFixed(1))),
               ]);
             }).toList(),
           ),
@@ -349,14 +348,30 @@ class _ResultPageState extends State<ResultPage> {
     return colors[index % colors.length];
   }
 
-  Widget _buildMockUTMEModeContent(ThemeData theme) {
-    final utmeTotal = widget.subjectResults.fold(0, (sum, item) => sum + (item.utmeScore ?? 0));
-    final olevelTotal = widget.subjectResults.fold(0, (sum, item) => sum + (item.olevelScore ?? 0));
-    final postUtmeTotal = widget.subjectResults.fold(0, (sum, item) => sum + (item.postUtmeScore ?? 0));
+  Widget _buildMockUTMEModeContent(ThemeData theme, Academics? academic) {
+    // Calculate UTME total from academic data
+    final utmeTotal = academic?.jambScores.fold(0, (sum, item) => sum + (item['score'] as int)) ?? 0;
+    
+    // Calculate O'Level total from academic data
+    academic!.oLevelGrades.removeWhere((test) => test['grade'] == null);
+    final olevelTotal = (academic.oLevelGrades.fold(0, (sum, item) {
+      final grade = item['grade'] as String;
+      final score = _convertOLevelGradeToScore(grade);
+      return sum + score;
+    }) ?? 0) / academic.oLevelGrades.length;
 
-    final postUtmeScreeningScore = (olevelTotal + postUtmeTotal) / 50;
-    final utmeScore = utmeTotal / 400 * 50;
+    // Calculate Post-UTME total from widget.subjectResults
+    final postUtmeTotal = widget.subjectResults.fold(0.0, (sum, item) => sum + (item.score/10 ?? 0).toDouble());
+
+    final postUtmeScreeningScore = (olevelTotal + postUtmeTotal);
+    final utmeScore = utmeTotal / 8;
     final aggregateScore = postUtmeScreeningScore + utmeScore;
+
+    // Create a combined list of all subjects from both sources
+    final allSubjects = {
+      ...?academic?.jambScores.map((js) => js['subject'] as String),
+      ...widget.subjectResults.map((sr) => sr.subject),
+    }.toList();
 
     return Column(
       children: [
@@ -378,15 +393,41 @@ class _ResultPageState extends State<ResultPage> {
                       DataColumn(label: Text("O'Level (10)")),
                       DataColumn(label: Text('Post-UTME (40)')),
                     ],
-                    rows: widget.subjectResults.map((result) {
-                      return DataRow(cells: [
-                        DataCell(Text(result.subject)),
-                        DataCell(Text((result.utmeScore ?? 0).toString())),
-                        DataCell(Text(result.olevelGrade ?? 'N/A')),
-                        DataCell(Text((result.olevelScore ?? 0).toString())),
-                        DataCell(Text((result.score ?? 0).toString())),
-                      ]);
-                    }).toList(),
+                    rows: [ 
+                      ...allSubjects.map((subject) {
+                        // Find UTME score
+                        final utmeScore = academic?.jambScores
+                            .firstWhere((js) => js['subject'] == subject, 
+                                orElse: () => {'score': 0})['score'] as int;
+                        
+                        // Find O'Level data
+                        final olevelGrade = academic?.oLevelGrades
+                            .firstWhere((og) => og['subject'] == subject,
+                                orElse: () => {'grade': 'N/A'})['grade'] ?? 'N/A' as String;
+                        final olevelScore = _convertOLevelGradeToScore(olevelGrade);
+                        
+                        // Find Post-UTME score
+                        final postUtmeScore = widget.subjectResults
+                            .firstWhere((sr) => sr.subject == subject,
+                                orElse: () => SubjectResult(subject: subject, score: 0, timeSpent: 0))
+                            .score/10 ?? 0;
+
+                        return DataRow(cells: [
+                          DataCell(Text(subject)),
+                          DataCell(Text(utmeScore.toString())),
+                          DataCell(Text(olevelGrade)),
+                          DataCell(Text(olevelScore.toString())),
+                          DataCell(Text(postUtmeScore.toString())),
+                        ]);
+                      }).toList(),
+                      DataRow(cells: [
+                        DataCell(Text('Total')),
+                        DataCell(Text(utmeTotal.toString())),
+                        DataCell(Text('N/A')),
+                        DataCell(Text(olevelTotal.toString())),
+                        DataCell(Text(postUtmeTotal.toString())),
+                      ]),
+                    ]
                   ),
                 ),
               ],
@@ -401,8 +442,9 @@ class _ResultPageState extends State<ResultPage> {
               children: [
                 Text('Score Calculation', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 16),
-                _buildScoreRow('Post-UTME Screening Score', '($olevelTotal + $postUtmeTotal) / 50', postUtmeScreeningScore.toStringAsFixed(2)),
-                _buildScoreRow('UTME Score', '$utmeTotal / 400 * 50', utmeScore.toStringAsFixed(2)),
+                _buildScoreRow('Post-UTME Screening Score', '($olevelTotal + $postUtmeTotal) = ${postUtmeScreeningScore.toStringAsFixed(2)} / 50', 
+                postUtmeScreeningScore.toStringAsFixed(2)),
+                _buildScoreRow('UTME Score', '$utmeTotal / 8 = ${utmeScore.toStringAsFixed(2)} / 50', utmeScore.toStringAsFixed(2)),
                 const Divider(),
                 _buildScoreRow('Aggregate Score', 'Post-UTME + UTME Score', aggregateScore.toStringAsFixed(2), isTotal: true),
               ],
@@ -411,6 +453,19 @@ class _ResultPageState extends State<ResultPage> {
         ),
       ],
     );
+  }
+
+  // Helper function to convert O'Level grades to scores
+  int _convertOLevelGradeToScore(String grade) {
+    switch (grade) {
+      case 'A1': return 10;
+      case 'B2': return 9;
+      case 'B3': return 8;
+      case 'C4': return 7;
+      case 'C5': return 6;
+      case 'C6': return 5;
+      default: return 0;
+    }
   }
 
   Widget _buildScoreRow(String label, String calculation, String value, {bool isTotal = false}) {

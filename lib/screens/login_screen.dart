@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:ivy_path/providers/auth_provider.dart';
+import 'qr_scan_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,17 +34,21 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleQRScan() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('QR code scanning coming soon!'),
-      ),
+    final qrCode = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const QRScanScreen()),
     );
+    if (qrCode != null && qrCode is String) {
+      _codeController.text = qrCode;
+      _handleActivation();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final auth = context.watch<AuthProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
       body: SafeArea(
@@ -59,12 +64,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'IvyPath',
-                      style: theme.textTheme.headlineLarge?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Image.asset(
+                      isDark ? 'assets/images/logo.png' : 'assets/images/logo_light.png',
+                      height: 120,
                     ).animate().fadeIn().slideY(
                       begin: -0.2,
                       duration: const Duration(milliseconds: 500),

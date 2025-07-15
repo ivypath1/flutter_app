@@ -48,7 +48,6 @@ class ForumService {
   }) async {
     try {
       final userId = user.id;
-      if (userId == null) throw Exception('User not authenticated');
 
       final newTopicRef = _database.child('topics').push();
 
@@ -192,6 +191,7 @@ class ForumService {
       }
       return [];
     } catch (e) {
+      print(e);
       throw Exception('Failed to load categories: $e');
     }
   }
@@ -324,7 +324,6 @@ class ForumService {
   Future<void> trackTopicView(String topicId) async {
     try {
       final userId = user.id;
-      if (userId == null) return;
 
       final userViewRef = _database.child('topics/$topicId/views/$userId');
       final snapshot = await userViewRef.get();
@@ -381,7 +380,6 @@ class ForumService {
   Future<void> likeTopic(String topicId) async {
     try {
       final userId = user.id;
-      if (userId == null) throw Exception('User not authenticated');
 
       final userLikeRef = _database.child('topics/$topicId/likes/$userId');
       final snapshot = await userLikeRef.get();
@@ -407,7 +405,6 @@ class ForumService {
   Future<void> likeReply(String replyId) async {
     try {
       final userId = user.id;
-      if (userId == null) throw Exception('User not authenticated');
 
       final userLikeRef = _database.child('replies/$replyId/likes/$userId');
       final snapshot = await userLikeRef.get();

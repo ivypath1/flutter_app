@@ -27,7 +27,7 @@ class SubjectService {
           },
         ),
       );
-      print(response.data);
+      // print(response.data);
       final subjects = (response.data as List)
           .map((subject) => Subject.fromJson(subject))
           .toList();
